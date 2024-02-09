@@ -86,6 +86,44 @@ void SymbolInfo::setNext(SymbolInfo *next)
     this->next = next;
 }
 
+void SymbolInfo::generateCode(FILE *ic, int level)
+{
+    // FILE *lib = fopen("printLibrary.txt", "r");
+    // char ch;
+    // if (lib != NULL)
+    // {
+    //     string codeSeg = ".code\nmain proc\n\tmov ax, @data\n\tmov ds, ax\n";
+
+    //     fprintf(ic, "%s", codeSeg.c_str());
+    //     string test = "\tmov ax, 10\n\tcall print_output\n\tmov ah, 04ch\n\tint 21h\n\tmain endp\n";
+    //     fprintf(ic, "%s", test.c_str());
+
+    //     while ((ch = fgetc(lib)) != EOF)
+    //         fputc(ch, ic);
+    // }
+    // printf("File copied successfully.");
+
+    if (leftPart == "start" && rightPart == "program")
+    {
+        string header_details = ".model small\n.stack 100h\n";
+        string dataSeg = ".data\n\tnumber db \"0000$\"\n";
+        fprintf(ic, "%s", header_details.c_str());
+        fprintf(ic, "%s", dataSeg.c_str());
+        for (SymbolInfo *i : globalVars)
+        {
+            if (i->getFlag() == 1)
+            {
+                fprintf(ic, "\t%s dw %d dup (0000h)\n", i->getName().c_str(), i->arraySize);
+            }
+            else
+            {
+                fprintf(ic, "\t%s dw 1 dup (0000h)\n", i->getName().c_str());
+            }
+            // printf("%s\n", i->getName().c_str());
+        }
+    }
+}
+
 unsigned long long ScopeTable::hash(const string &str)
 {
     // Using sdbm hash
@@ -362,6 +400,28 @@ void ScopeTable::printInFile(FILE *file)
     }
 }
 
+vector<SymbolInfo *> ScopeTable::getTableVars()
+{
+    vector<SymbolInfo *> result;
+    if (id != "1")
+    {
+        return result;
+    }
+
+    for (int i = 0; i < totalBuckets; i++)
+    {
+        SymbolInfo *tmp = table[i];
+        while (tmp != NULL)
+        {
+            if (tmp->getFlag() == 0 || tmp->getFlag() == 1)
+            {
+                result.push_back(tmp);
+            }
+            tmp = tmp->next;
+        }
+    }
+    return result;
+}
 void SymbolTable::deleteRecur(ScopeTable *table)
 {
     if (table == NULL)
@@ -492,6 +552,16 @@ void SymbolTable::printAllScopeTableInFile(FILE *file)
     }
 }
 
+vector<SymbolInfo *> SymbolTable::getGlobalVars()
+{
+    ScopeTable *tmp = cur;
+    if (tmp->parentScope != NULL)
+    {
+        tmp = tmp->parentScope;
+    }
+
+    return tmp->getTableVars();
+}
 LinkedList::LinkedList()
 {
     head = NULL;

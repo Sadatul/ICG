@@ -9,6 +9,7 @@ mkdir -p ./bin
 echo 'Created the bin directory'
 cp -f 2005077_SymbolTable.h ./bin
 echo 'Copied the header file'
+cp -f ./lib/printLibrary.txt ./bin
 
 yacc -d 2005077_Parser.y -o ./bin/parser.cpp
 echo 'Generated the parser.cpp file.'

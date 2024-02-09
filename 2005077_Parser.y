@@ -18,6 +18,7 @@ extern FILE* yyin;
 
 // For keeping track of all the variables
 SymbolTable *symbolTable;
+vector<SymbolInfo *> SymbolInfo::globalVars;
 
 LinkedList vars;
 LinkedList params;
@@ -117,6 +118,11 @@ start : program
 		$$ = tmp;
 		fprintf(logout, "start : program \n");
 		printParseTree($$, 0);
+
+		SymbolInfo::globalVars = symbolTable->getGlobalVars();
+		FILE *out = fopen("./output/code.txt", "w");
+		$$->generateCode(out, 0);
+
 		freeParseTree($$);
 	  }
       ;
@@ -149,6 +155,8 @@ program : program unit
         ;
 unit : var_declaration
 	 {
+		$1->isGlobalVarDec = true;
+
 		SymbolInfo *tmp = new SymbolInfo("unit", "unit");
 		tmp->leftPart = "unit";
 		tmp->rightPart = "var_declaration";

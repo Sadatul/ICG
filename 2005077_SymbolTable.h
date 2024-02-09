@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdio>
+#include <vector>
 using namespace std;
 
 class SymbolInfo;
@@ -44,6 +45,7 @@ public:
     int endLine;          // The ending line
     bool isLeaf;          // To know if it is leaf or not
     int depth;            // For printing the spaces in the parse Tree
+    bool isGlobalVarDec;  // For detecting global Variable declaration.
 
     int arraySize; // For array
     SymbolInfo(string name = "", string type = "", SymbolInfo *next = NULL);
@@ -59,6 +61,10 @@ public:
     void setType(string type);
     SymbolInfo *getNext();
     void setNext(SymbolInfo *next);
+
+    // Static vars for code generation
+    static vector<SymbolInfo *> globalVars;
+    void generateCode(FILE *ic, int level);
 };
 
 class ScopeTable
@@ -88,6 +94,7 @@ public:
     bool Delete(string name, bool print = false);
     void print();
     void printInFile(FILE *file);
+    vector<SymbolInfo *> getTableVars();
 };
 
 class SymbolTable
@@ -111,4 +118,6 @@ public:
     void printAllScopeTable();
     void printCurScopeTableInFile(FILE *file);
     void printAllScopeTableInFile(FILE *file);
+
+    vector<SymbolInfo *> getGlobalVars();
 };
