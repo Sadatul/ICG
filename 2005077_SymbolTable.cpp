@@ -121,7 +121,101 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
             // printf("%s\n", i->getName().c_str());
         }
+        children->generateCode(ic, level);
     }
+    if (leftPart == "program" && rightPart == "program unit")
+    {
+        printf("INSIDE PROGRAM\n");
+        children->generateCode(ic, level);
+        getIthChildren(1)->generateCode(ic, level);
+    }
+    if (leftPart == "program" && rightPart == "unit")
+    {
+        printf("INSIDE PROGRAM\n");
+        children->generateCode(ic, level);
+    }
+    if (leftPart == "unit" && rightPart == "func_definition")
+    {
+        printf("INSIDE unit\n");
+        children->generateCode(ic, level);
+    }
+    if (leftPart == "func_definition" && rightPart == "type_specifier ID LPAREN RPAREN compound_statement")
+    {
+        printf("INSIDE func_def\n");
+        // children->next->next->next->next->generateCode(ic, level);
+        fprintf(ic, "%s proc\n", getIthChildren(1)->getName().c_str());
+        if (getIthChildren(1)->getName() == "main")
+        {
+            fprintf(ic, "\tmov ax, @data\n");
+            fprintf(ic, "\tmov ds, ax\n");
+        }
+        fprintf(ic, "\tpush bp\n");
+        fprintf(ic, "\tmov bp, sp\n");
+        getIthChildren(4)->generateCode(ic, level);
+        fprintf(ic, "%s_exit:\n", getIthChildren(1)->getName().c_str());
+        if (getIthChildren(1)->getName() == "main")
+        {
+            fprintf(ic, "\tmov ax, 04ch\n");
+            fprintf(ic, "\tint 21h\n");
+        }
+        fprintf(ic, "\tadd sp, %d\n", getIthChildren(4)->offset);
+        fprintf(ic, "\tpop bp\n");
+        fprintf(ic, "%s endp\n", getIthChildren(1)->getName().c_str());
+    }
+    if (leftPart == "compound_statement" && rightPart == "LCURL statements RCURL")
+    {
+        printf("INSIDE compound_statement\n");
+        // children->next->generateCode(ic, level);
+        getIthChildren(1)->generateCode(ic, level);
+    }
+    if (leftPart == "statements" && rightPart == "statements statement")
+    {
+        printf("INSIDE statemets statement\n");
+        getIthChildren(0)->generateCode(ic, level);
+        getIthChildren(1)->generateCode(ic, level);
+    }
+    if (leftPart == "expression_statement" && rightPart == "expression SEMICOLON")
+    {
+        printf("INSIDE statemets statement\n");
+        getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "expression" && rightPart == "variable ASSIGNOP logic_expression")
+    {
+    }
+    if (leftPart == "statements" && rightPart == "statement")
+    {
+        printf("INSIDE statemets\n");
+        children->generateCode(ic, level);
+    }
+    if (leftPart == "statement" && rightPart == "var_declaration")
+    {
+        printf("INSIDE statemet\n");
+        children->generateCode(ic, level);
+    }
+    if (leftPart == "var_declaration" && rightPart == "type_specifier declaration_list SEMICOLON")
+    {
+        printf("INSIDE var_declaration %d\n", varDecOffsetList.size());
+        for (int i : varDecOffsetList)
+        {
+            fprintf(ic, "\tsub sp, %d\n", i);
+        }
+    }
+}
+
+SymbolInfo *SymbolInfo::getIthChildren(int i)
+{
+    SymbolInfo *cur = children;
+    if (i < 0)
+    {
+        printf("Negative index given");
+        return NULL;
+    }
+    while (i != 0)
+    {
+        cur = cur->next;
+        i--;
+    }
+    return cur;
 }
 
 unsigned long long ScopeTable::hash(const string &str)
@@ -459,7 +553,7 @@ void SymbolTable::enterScope(bool print)
     cur->childAdded();
     string id = cur->getId() + "." + to_string(cur->getChildNum());
     cur = new ScopeTable(id, totalBuckets, cur);
-
+    cur->stackOffset = 0;
     if (print)
     {
         cout << "\tScopeTable# " << id << " created" << endl;
@@ -562,6 +656,20 @@ vector<SymbolInfo *> SymbolTable::getGlobalVars()
 
     return tmp->getTableVars();
 }
+
+string SymbolTable::getCurId()
+{
+    return cur->getId();
+}
+int SymbolTable::getStackOffset()
+{
+    return cur->stackOffset;
+};
+void SymbolTable::setStackOffset(int offset)
+{
+    cur->stackOffset = offset;
+};
+
 LinkedList::LinkedList()
 {
     head = NULL;

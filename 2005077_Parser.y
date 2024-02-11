@@ -54,6 +54,14 @@ void addFunction(string name, string type, bool isDefined){
 	}
 	symbolTable->insert(tmp2);
 }
+
+void insertToGlobalVars(string name, string type, int flag, int arraySize = 0){
+	SymbolInfo* tmp = new SymbolInfo(name, type, flag);
+	tmp->isGlobal = true;
+	tmp->arraySize = arraySize;
+	tmp->offset = 0;
+	SymbolInfo::globalVars.push_back(tmp);
+}
 void printParseTree(SymbolInfo *root, int level){
 	if(root == NULL){
 		return;
@@ -119,7 +127,7 @@ start : program
 		fprintf(logout, "start : program \n");
 		printParseTree($$, 0);
 
-		SymbolInfo::globalVars = symbolTable->getGlobalVars();
+		// SymbolInfo::globalVars = symbolTable->getGlobalVars();
 		FILE *out = fopen("./output/code.txt", "w");
 		$$->generateCode(out, 0);
 
@@ -155,7 +163,7 @@ program : program unit
         ;
 unit : var_declaration
 	 {
-		$1->isGlobalVarDec = true;
+		// $1->isGlobalVarDec = true;
 
 		SymbolInfo *tmp = new SymbolInfo("unit", "unit");
 		tmp->leftPart = "unit";
@@ -608,6 +616,7 @@ compound_statement : LCURL ENTER_SCOPE statements RCURL
 						fprintf(logout, "compound_statement : LCURL statements RCURL  \n");
 
 						symbolTable->printAllScopeTableInFile(logout);
+						$$->offset = symbolTable->getStackOffset();
 						symbolTable->exitScope();
 				   }
 				   |
@@ -635,7 +644,7 @@ ENTER_SCOPE :
 				symbolTable->enterScope();
 				SymbolInfo *tmp = params.head;
 				while(tmp != NULL){
-					symbolTable->insert(tmp->getName(), tmp->getType(), 0);
+					// symbolTable->insert(tmp->getName(), tmp->getType(), 0);
 					tmp = tmp->next;
 				}
 				// params.clear();
@@ -670,29 +679,35 @@ var_declaration : type_specifier declaration_list SEMICOLON
 						SymbolInfo *cur = vars.head;
 						while(cur != NULL){
 							if(cur->getFlag() == 0){
-								bool inserted = symbolTable->insert(cur->getName(), $1->getName(), 0);
-								if(!inserted){
-									error_count++;
-									SymbolInfo *tmp1 = symbolTable->lookUp(cur->getName());
-									if(tmp1->getType() != $1->getName()){
-										fprintf(errorout, "Line# %d: Conflicting types for\'%s\'\n", $1->startLine, cur->getName().c_str());
-									}
-									else{
-										fprintf(errorout, "Line# %d: Multiple declaration of %s\n", $1->startLine, cur->getName().c_str());
-									}
+								symbolTable->setStackOffset(symbolTable->getStackOffset() + 2);
+								// If the variable is global..it will change offset in scopetable 1
+								// That will have no effect on our local variables that will be
+								// inside a entirely different scope
+								// We are treating the globalScope as a don't care
+								SymbolInfo *tmp = new SymbolInfo(cur->getName(), cur->getType(), 0);
+								tmp->offset = symbolTable->getStackOffset();
+								tmp->isGlobal = false;
+								bool inserted = symbolTable->insert(tmp);
+								if(symbolTable->getCurId() == "1"){
+									insertToGlobalVars(cur->getName(), cur->getType(), 0);
 								}
+								else{
+									$$->varDecOffsetList.push_back(2);
+
+								}							
 							}
 							else if(cur->getFlag() == 1){
-								bool inserted = symbolTable->insert(cur->getName(), $1->getName(), 1, cur);
-								if(!inserted){
-									error_count++;
-									SymbolInfo *tmp1 = symbolTable->lookUp(cur->getName());
-									if(tmp1->getType() != $1->getName()){
-										fprintf(errorout, "Line# %d: Conflicting types for\'%s\'\n", $1->startLine, cur->getName().c_str());
-									}
-									else{
-										fprintf(errorout, "Line# %d: Multiple declaration of %s\n", $1->startLine, cur->getName().c_str());
-									}
+								symbolTable->setStackOffset(symbolTable->getStackOffset() + (2 * cur->arraySize));
+								SymbolInfo *tmp = new SymbolInfo(cur->getName(), cur->getType(), 1);
+								tmp->offset = symbolTable->getStackOffset();
+								tmp->arraySize = cur->arraySize;
+								tmp->isGlobal = false;
+								bool inserted = symbolTable->insert(tmp);
+								if(symbolTable->getCurId() == "1"){
+									insertToGlobalVars(cur->getName(), cur->getType(), 1, cur->arraySize);
+								}
+								else {
+									$$->varDecOffsetList.push_back(2 * cur->arraySize);
 								}
 							}
 							cur = cur->next;
@@ -1104,28 +1119,8 @@ variable : ID
 			fprintf(logout, "variable : ID \t \n");
 
 			SymbolInfo *check = symbolTable->lookUp($1->getName());
-			if(check == NULL){
-				error_count++;
-				fprintf(errorout, "Line# %d: Undeclared variable \'%s\'\n", $1->startLine, $1->getName().c_str());
-				tmp->dType = "UNDEFINED";
-				tmp->setFlag(0);
-			}
-			else {
-				// Functions can't be considered variables so we are thrwoing an error.
-				// When we find a function we are showing the error and then as an 
-				// recovery we are actually considering it as a variable with type
-				// same as the returnType of the function.
-				if(check->getFlag() == 2){
-					error_count++;
-					fprintf(errorout, "Line# %d: \'%s\' is a function.\n", $1->startLine, $1->getName().c_str());
-					tmp->dType = "UNDEFINED";
-					tmp->setFlag(0);
-				}
-				else{
-					tmp->dType = check->getType();
-					tmp->setFlag(check->getFlag());
-				}
-			}
+			tmp->dType = check->getType();
+			tmp->setFlag(check->getFlag());
 			$$ = tmp;
 
 		 }
@@ -1147,29 +1142,9 @@ variable : ID
 			fprintf(logout, "variable : ID LSQUARE expression RSQUARE  \t \n");
 
 			tmp->isZero = false;
-
 			SymbolInfo *check = symbolTable->lookUp($1->getName());
-			if(check == NULL){
-				error_count++;
-				fprintf(errorout, "Line# %d: Undeclared variable \'%s\'\n", $1->startLine, $1->getName().c_str());
-				tmp->dType = "UNDEFINED";
-				tmp->setFlag(0);
-			}
-			else {
-				tmp->dType = check->getType();
-				tmp->setFlag(0); // We a[12] can be treated like an integer variable rather than an array.
-				if(check->getFlag() == 1){
-					if($3->dType != "INT"){
-						error_count++;
-						fprintf(errorout, "Line# %d: Array subscript is not an integer\n", $1->startLine);
-					}
-				}
-				else {
-					error_count++;
-					fprintf(errorout, "Line# %d: \'%s\' is not an array\n", $1->startLine, $1->getName().c_str());
-
-				}	
-			}
+			tmp->dType = check->getType();
+			tmp->setFlag(0); // We a[12] can be treated like an integer variable rather than an array.
 			$$ = tmp;
 		 }
 		 ;

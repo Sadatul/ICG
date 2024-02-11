@@ -45,7 +45,15 @@ public:
     int endLine;          // The ending line
     bool isLeaf;          // To know if it is leaf or not
     int depth;            // For printing the spaces in the parse Tree
-    bool isGlobalVarDec;  // For detecting global Variable declaration.
+
+    bool isGlobal; // For detecting global Variables.
+    int offset;    // For accessing variables in the stack
+                   // compound_statement use this variable to store...
+                   // the stack offset that needs tobe added...after the function
+                   // ends
+                   // variable use this to hold the offset of the corrosponding ID
+
+    vector<int> varDecOffsetList; // This array is used to move Sp during var declaration. Only used by var_declaration
 
     int arraySize; // For array
     SymbolInfo(string name = "", string type = "", SymbolInfo *next = NULL);
@@ -65,6 +73,7 @@ public:
     // Static vars for code generation
     static vector<SymbolInfo *> globalVars;
     void generateCode(FILE *ic, int level);
+    SymbolInfo *getIthChildren(int i);
 };
 
 class ScopeTable
@@ -81,6 +90,7 @@ private:
                   // create the id;
 public:
     ScopeTable *parentScope;
+    int stackOffset;
 
     ScopeTable(string id, int totalBuckets, ScopeTable *parentScope = NULL);
     ~ScopeTable();
@@ -119,5 +129,8 @@ public:
     void printCurScopeTableInFile(FILE *file);
     void printAllScopeTableInFile(FILE *file);
 
+    string getCurId();
     vector<SymbolInfo *> getGlobalVars();
+    int getStackOffset();
+    void setStackOffset(int offset);
 };
