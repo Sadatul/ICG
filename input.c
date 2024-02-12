@@ -6,6 +6,7 @@ int main()
     a = 4;
     println(a);
     d = 7;
-    e = d / a;
+    e = a-- * 10;
+    println(a);
     println(e);
 }

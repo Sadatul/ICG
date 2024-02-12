@@ -322,6 +322,8 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov cx, word ptr [bp - %d]\n", variable->children->offset);
             }
         }
+        // cx must retain the old value
+        fprintf(ic, "\tpush cx\n");
         fprintf(ic, "\tinc cx\n");
 
         if (variable->rightPart == "ID")
@@ -335,6 +337,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov word ptr [bp - %d], cx\n", variable->children->offset);
             }
         }
+        fprintf(ic, "\tpop cx\n");
     }
     if (leftPart == "factor" && rightPart == "variable DECOP")
     {
@@ -350,6 +353,8 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov cx, word ptr [bp - %d]\n", variable->children->offset);
             }
         }
+        // cx must retain the old value
+        fprintf(ic, "\tpush cx\n");
         fprintf(ic, "\tdec cx\n");
 
         if (variable->rightPart == "ID")
@@ -363,6 +368,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov word ptr [bp - %d], cx\n", variable->children->offset);
             }
         }
+        fprintf(ic, "\tpop cx\n");
     }
     if (leftPart == "statements" && rightPart == "statement")
     {
