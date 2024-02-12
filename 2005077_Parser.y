@@ -19,6 +19,7 @@ extern FILE* yyin;
 // For keeping track of all the variables
 SymbolTable *symbolTable;
 vector<SymbolInfo *> SymbolInfo::globalVars;
+int stackOffset = 0;
 
 LinkedList vars;
 LinkedList params;
@@ -616,7 +617,8 @@ compound_statement : LCURL ENTER_SCOPE statements RCURL
 						fprintf(logout, "compound_statement : LCURL statements RCURL  \n");
 
 						symbolTable->printAllScopeTableInFile(logout);
-						$$->offset = symbolTable->getStackOffset();
+						$$->offset = stackOffset;
+						stackOffset = 0;
 						symbolTable->exitScope();
 				   }
 				   |
@@ -679,34 +681,42 @@ var_declaration : type_specifier declaration_list SEMICOLON
 						SymbolInfo *cur = vars.head;
 						while(cur != NULL){
 							if(cur->getFlag() == 0){
-								symbolTable->setStackOffset(symbolTable->getStackOffset() + 2);
+								// symbolTable->setStackOffset(symbolTable->getStackOffset() + 2);
 								// If the variable is global..it will change offset in scopetable 1
 								// That will have no effect on our local variables that will be
 								// inside a entirely different scope
 								// We are treating the globalScope as a don't care
 								SymbolInfo *tmp = new SymbolInfo(cur->getName(), cur->getType(), 0);
-								tmp->offset = symbolTable->getStackOffset();
-								tmp->isGlobal = false;
-								bool inserted = symbolTable->insert(tmp);
 								if(symbolTable->getCurId() == "1"){
 									insertToGlobalVars(cur->getName(), cur->getType(), 0);
+									tmp->offset = 0;
+									tmp->isGlobal = true;
+									bool inserted = symbolTable->insert(tmp);
 								}
 								else{
+									stackOffset += 2;
+									tmp->offset = stackOffset;
+									tmp->isGlobal = false;
+									bool inserted = symbolTable->insert(tmp);
 									$$->varDecOffsetList.push_back(2);
 
 								}							
 							}
 							else if(cur->getFlag() == 1){
-								symbolTable->setStackOffset(symbolTable->getStackOffset() + (2 * cur->arraySize));
+								// symbolTable->setStackOffset(symbolTable->getStackOffset() + (2 * cur->arraySize));
 								SymbolInfo *tmp = new SymbolInfo(cur->getName(), cur->getType(), 1);
-								tmp->offset = symbolTable->getStackOffset();
 								tmp->arraySize = cur->arraySize;
-								tmp->isGlobal = false;
-								bool inserted = symbolTable->insert(tmp);
 								if(symbolTable->getCurId() == "1"){
 									insertToGlobalVars(cur->getName(), cur->getType(), 1, cur->arraySize);
+									tmp->isGlobal = true;
+									tmp->offset = 0;
+									bool inserted = symbolTable->insert(tmp);
 								}
 								else {
+									stackOffset += (2 * cur->arraySize);
+									tmp->offset = stackOffset;
+									tmp->isGlobal = false;
+									bool inserted = symbolTable->insert(tmp);
 									$$->varDecOffsetList.push_back(2 * cur->arraySize);
 								}
 							}
@@ -1027,13 +1037,8 @@ statement : var_declaration
 			fprintf(logout, "statement : PRINTLN LPAREN ID RPAREN SEMICOLON \n");
 
 		  	SymbolInfo *check = symbolTable->lookUp($3->getName());
-			if(check == NULL){
-				error_count++;
-				fprintf(errorout, "Line# %d: Undeclared variable \'%s\'\n", $3->startLine, $3->getName().c_str());
-			} else if(check->getFlag() == 2){
-				error_count++;
-				fprintf(errorout, "Line# %d: \'%s\' is a function.\n", $3->startLine, $3->getName().c_str());
-			}
+			$3->isGlobal = check->isGlobal;
+			$3->offset = check->offset;
 		  }
 		  |
 		  RETURN expression SEMICOLON
@@ -1121,6 +1126,8 @@ variable : ID
 			SymbolInfo *check = symbolTable->lookUp($1->getName());
 			tmp->dType = check->getType();
 			tmp->setFlag(check->getFlag());
+			$1->offset = check->offset;
+			$1->isGlobal = check->isGlobal;
 			$$ = tmp;
 
 		 }
@@ -1716,7 +1723,6 @@ factor : variable
 	   variable DECOP
 	   {
 			SymbolInfo *tmp = new SymbolInfo($1->getName() + "--", "factor");
-			
 			tmp->dType = $1->dType;
 			tmp->setFlag($1->getFlag());
 			tmp->isZero = false; // We can't tell until we evaluate the expression.

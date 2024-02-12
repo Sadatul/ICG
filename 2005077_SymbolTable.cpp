@@ -121,7 +121,12 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
             // printf("%s\n", i->getName().c_str());
         }
+        fprintf(ic, ".code\n");
         children->generateCode(ic, level);
+        FILE *lib = fopen("printLibrary.txt", "r");
+        char ch;
+        while ((ch = fgetc(lib)) != EOF)
+            fputc(ch, ic);
     }
     if (leftPart == "program" && rightPart == "program unit")
     {
@@ -174,6 +179,27 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         getIthChildren(0)->generateCode(ic, level);
         getIthChildren(1)->generateCode(ic, level);
     }
+    if (leftPart == "statement" && rightPart == "expression_statement")
+    {
+        printf("INSIDE statemets expression_statement\n");
+        getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "statement" && rightPart == "PRINTLN LPAREN ID RPAREN SEMICOLON")
+    {
+        SymbolInfo *id = getIthChildren(2);
+        if (id->isGlobal)
+        {
+            fprintf(ic, "\tmov ax, %s\n", id->getName().c_str());
+            fprintf(ic, "\tcall print_output\n");
+            fprintf(ic, "\tcall new_line\n");
+        }
+        else
+        {
+            fprintf(ic, "\tmov ax, word ptr [bp - %d]\n", id->offset);
+            fprintf(ic, "\tcall print_output\n");
+            fprintf(ic, "\tcall new_line\n");
+        }
+    }
     if (leftPart == "expression_statement" && rightPart == "expression SEMICOLON")
     {
         printf("INSIDE statemets statement\n");
@@ -181,6 +207,162 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     }
     if (leftPart == "expression" && rightPart == "variable ASSIGNOP logic_expression")
     {
+        SymbolInfo *variable = getIthChildren(0);
+        getIthChildren(2)->generateCode(ic, level);
+        // We evaluate in such a that, we always get the value in CX
+        if (variable->rightPart == "ID")
+        {
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov %s, cx\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tmov word ptr [bp - %d], cx\n", variable->children->offset);
+            }
+        }
+    }
+    if (leftPart == "logic_expression" && rightPart == "rel_expression")
+    {
+        getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "rel_expression" && rightPart == "simple_expression")
+    {
+        getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "simple_expression" && rightPart == "term")
+    {
+        getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "simple_expression" && rightPart == "simple_expression ADDOP term")
+    {
+        getIthChildren(0)->generateCode(ic, level);
+        fprintf(ic, "\tpush cx\n");
+        getIthChildren(2)->generateCode(ic, level);
+        fprintf(ic, "\tpop ax\n");
+        // Now we have the value of simple_exp in ax and term in cx
+
+        if (getIthChildren(1)->getName() == "+")
+        {
+            fprintf(ic, "\tadd cx, ax\n");
+        }
+        else if (getIthChildren(1)->getName() == "-")
+        {
+            // Need to move the result to cx after substraction.
+            fprintf(ic, "\tsub ax, cx\n\tmov cx, ax\n");
+        }
+    }
+    if (leftPart == "term" && rightPart == "unary_expression")
+    {
+        getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "term" && rightPart == "term MULOP unary_expression")
+    {
+        getIthChildren(0)->generateCode(ic, level);
+        fprintf(ic, "\tpush cx\n");
+        getIthChildren(2)->generateCode(ic, level);
+        fprintf(ic, "\tpop ax\n");
+        // Now we have the value of term in ax and unary_exp in cx
+        if (getIthChildren(1)->getName() == "*")
+        {
+            fprintf(ic, "\timul cx\n");
+            // As we are expecting to get the result in cx we mov the result to cx
+            // Here we are only taking lower 2bytes of the 4 byte result
+            fprintf(ic, "\tmov cx, ax\n");
+        }
+        else if (getIthChildren(1)->getName() == "/")
+        {
+            fprintf(ic, "\tcwd\n");
+            fprintf(ic, "\tidiv cx\n");
+            // As we are expecting to get the result in cx we mov the result to cx
+            fprintf(ic, "\tmov cx, ax\n");
+        }
+        else if (getIthChildren(1)->getName() == "%")
+        {
+            fprintf(ic, "\tcwd\n");
+            fprintf(ic, "\tidiv cx\n");
+            // As we are expecting to get the result in cx we mov the result to cx
+            fprintf(ic, "\tmov cx, dx\n");
+        }
+    }
+    if (leftPart == "unary_expression" && rightPart == "factor")
+    {
+        getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "factor" && rightPart == "CONST_INT")
+    {
+        fprintf(ic, "\tmov cx, %s\n", getIthChildren(0)->getName().c_str());
+    }
+    if (leftPart == "factor" && rightPart == "variable")
+    {
+        SymbolInfo *variable = children;
+        if (variable->rightPart == "ID")
+        {
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov cx, %s\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tmov cx, word ptr [bp - %d]\n", variable->children->offset);
+            }
+        }
+    }
+    if (leftPart == "factor" && rightPart == "variable INCOP")
+    {
+        SymbolInfo *variable = getIthChildren(0);
+        if (variable->rightPart == "ID")
+        {
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov cx, %s\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tmov cx, word ptr [bp - %d]\n", variable->children->offset);
+            }
+        }
+        fprintf(ic, "\tinc cx\n");
+
+        if (variable->rightPart == "ID")
+        {
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov %s, cx\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tmov word ptr [bp - %d], cx\n", variable->children->offset);
+            }
+        }
+    }
+    if (leftPart == "factor" && rightPart == "variable DECOP")
+    {
+        SymbolInfo *variable = getIthChildren(0);
+        if (variable->rightPart == "ID")
+        {
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov cx, %s\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tmov cx, word ptr [bp - %d]\n", variable->children->offset);
+            }
+        }
+        fprintf(ic, "\tdec cx\n");
+
+        if (variable->rightPart == "ID")
+        {
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov %s, cx\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tmov word ptr [bp - %d], cx\n", variable->children->offset);
+            }
+        }
     }
     if (leftPart == "statements" && rightPart == "statement")
     {
