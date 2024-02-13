@@ -1,9 +1,33 @@
-int a, b[5];
-
 int main()
 {
-    int d, e;
-    d = 10;
-    e = d == 9 + 2 || d == 11;
-    println(e);
+
+    int i, j, k;
+
+    i = 3;
+    j = 8;
+    k = 6;
+
+    if (i == 3)
+    {
+        println(j);
+    }
+
+    if (j < 8)
+    {
+        println(i);
+    }
+    else
+    {
+        println(k);
+    }
+
+    if (k == 6)
+    {
+        println(k);
+    }
+    else
+    {
+        k = 0;
+        println(k);
+    }
 }

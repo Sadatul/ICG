@@ -181,18 +181,74 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     {
         printf("INSIDE compound_statement\n");
         // children->next->generateCode(ic, level);
+
+        // We have to declare a next, otherwise ":" will be print.
+        if (lNext == "")
+            lNext = LabelMaker::getLable();
+        getIthChildren(1)->lNext = lNext;
         getIthChildren(1)->generateCode(ic, level);
     }
     if (leftPart == "statements" && rightPart == "statements statement")
     {
         printf("INSIDE statemets statement\n");
+        getIthChildren(0)->lNext = LabelMaker::getLable();
+        getIthChildren(1)->lNext = lNext;
         getIthChildren(0)->generateCode(ic, level);
+        // The label that needs to be printed here will be recursively printed.
         getIthChildren(1)->generateCode(ic, level);
+        fprintf(ic, "%s:\n", lNext.c_str());
+    }
+    if (leftPart == "statements" && rightPart == "statement")
+    {
+        printf("INSIDE statemets\n");
+        children->lNext = lNext;
+        children->generateCode(ic, level);
+        fprintf(ic, "%s:\n", lNext.c_str());
     }
     if (leftPart == "statement" && rightPart == "expression_statement")
     {
         printf("INSIDE statemets expression_statement\n");
+        // Not supposed to need lNext here...so not passing
         getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "statement" && rightPart == "compound_statement")
+    {
+        // BOLD MOVE
+        // BOLD MOVE
+        // BOLD MOVE
+        // BOLD MOVE
+        children->lNext = LabelMaker::getLable();
+        children->generateCode(ic, level);
+    }
+    if (leftPart == "statement" && rightPart == "IF LPAREN expression RPAREN statement")
+    {
+        SymbolInfo *exp = getIthChildren(2);
+        exp->isCond = true;
+        exp->lTrue = LabelMaker::getLable();
+        exp->lFalse = lNext;
+        getIthChildren(4)->lNext = lNext;
+        exp->generateCode(ic, level);
+        fprintf(ic, "%s:\n", exp->lTrue.c_str());
+        getIthChildren(4)->generateCode(ic, level);
+    }
+    if (leftPart == "statement" && rightPart == "IF LPAREN expression RPAREN statement ELSE statement")
+    {
+        SymbolInfo *exp = getIthChildren(2);
+        SymbolInfo *stat1 = getIthChildren(4);
+        SymbolInfo *stat2 = getIthChildren(6);
+
+        exp->isCond = true;
+        exp->lTrue = LabelMaker::getLable();
+        exp->lFalse = LabelMaker::getLable();
+
+        stat1->lNext = lNext;
+        stat2->lNext = lNext;
+        exp->generateCode(ic, level);
+        fprintf(ic, "%s:\n", exp->lTrue.c_str());
+        stat1->generateCode(ic, level);
+        fprintf(ic, "\tjmp %s\n", lNext.c_str());
+        fprintf(ic, "%s:\n", exp->lFalse.c_str());
+        stat2->generateCode(ic, level);
     }
     if (leftPart == "statement" && rightPart == "PRINTLN LPAREN ID RPAREN SEMICOLON")
     {
@@ -473,11 +529,6 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
         }
         fprintf(ic, "\tpop cx\n");
-    }
-    if (leftPart == "statements" && rightPart == "statement")
-    {
-        printf("INSIDE statemets\n");
-        children->generateCode(ic, level);
     }
     if (leftPart == "statement" && rightPart == "var_declaration")
     {
