@@ -9,6 +9,11 @@ SymbolInfo::SymbolInfo(string name, string type, SymbolInfo *next)
     children = NULL;
     isLeaf = false;
     error = false;
+
+    isCond = false;
+    lTrue = "";
+    lFalse = "";
+    lNext = "";
 }
 
 SymbolInfo::SymbolInfo(string name, string type, int flag)
@@ -24,6 +29,11 @@ SymbolInfo::SymbolInfo(string name, string type, int flag)
     }
     isLeaf = false;
     error = false;
+
+    isCond = false;
+    lTrue = "";
+    lFalse = "";
+    lNext = "";
 }
 
 SymbolInfo::~SymbolInfo()
@@ -222,13 +232,107 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
         }
     }
+    if (leftPart == "expression" && rightPart == "logic_expression")
+    {
+        SymbolInfo *child = getIthChildren(0);
+        child->isCond = isCond;
+        child->lTrue = lTrue;
+        child->lFalse = lFalse;
+        child->generateCode(ic, level);
+    }
     if (leftPart == "logic_expression" && rightPart == "rel_expression")
     {
-        getIthChildren(0)->generateCode(ic, level);
+        SymbolInfo *child = getIthChildren(0);
+        child->isCond = isCond;
+        child->lTrue = lTrue;
+        child->lFalse = lFalse;
+        child->generateCode(ic, level);
+    }
+    if (leftPart == "logic_expression" && rightPart == "rel_expression LOGICOP rel_expression")
+    {
+        SymbolInfo *rel1 = getIthChildren(0);
+        SymbolInfo *rel2 = getIthChildren(2);
+
+        rel1->isCond = true;
+        string relop = getIthChildren(1)->getName();
+        rel2->isCond = true;
+
+        if (!isCond)
+        {
+            lTrue = LabelMaker::getLable();
+            lFalse = LabelMaker::getLable();
+        }
+        if (relop == "||")
+        {
+            rel1->lTrue = lTrue;
+            rel1->lFalse = LabelMaker::getLable();
+            rel2->lTrue = lTrue;
+            rel2->lFalse = lFalse;
+        }
+        else
+        {
+            rel1->lFalse = lFalse;
+            rel1->lTrue = LabelMaker::getLable();
+            rel2->lFalse = lFalse;
+            rel2->lTrue = lTrue;
+        }
+        rel1->generateCode(ic, level);
+        if (relop == "||")
+        {
+            fprintf(ic, "%s:\n", rel1->lFalse.c_str());
+        }
+        else
+        {
+            fprintf(ic, "%s:\n", rel1->lTrue.c_str());
+        }
+        rel2->generateCode(ic, level);
+
+        if (!isCond)
+        {
+            fprintf(ic, "%s:\n", lTrue.c_str());
+            fprintf(ic, "\tmov cx, 1\n");
+            string exit = LabelMaker::getLable();
+            fprintf(ic, "\tjmp %s\n", exit.c_str());
+            fprintf(ic, "%s:\n", lFalse.c_str());
+            fprintf(ic, "\tmov cx, 0\n");
+            fprintf(ic, "%s:\n", exit.c_str());
+        }
     }
     if (leftPart == "rel_expression" && rightPart == "simple_expression")
     {
         getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "rel_expression" && rightPart == "simple_expression RELOP simple_expression")
+    {
+        getIthChildren(0)->generateCode(ic, level);
+        fprintf(ic, "\tpush cx\n");
+        getIthChildren(2)->generateCode(ic, level);
+        fprintf(ic, "\tpop ax\n");
+        // Value of first simp_exp is in ax and 2nd simp_exp is in cx
+
+        string tag = getRelopTag(getIthChildren(1)->getName());
+
+        if (!isCond)
+        {
+            // Even if expression is not a condition we will treat it like
+            lTrue = LabelMaker::getLable();
+            lFalse = LabelMaker::getLable();
+        }
+
+        fprintf(ic, "\tcmp ax, cx\n");
+        fprintf(ic, "\t%s %s\n", tag.c_str(), lTrue.c_str());
+        fprintf(ic, "\tjmp %s\n", lFalse.c_str());
+
+        if (!isCond)
+        {
+            fprintf(ic, "%s:\n", lTrue.c_str());
+            fprintf(ic, "\tmov cx, 1\n");
+            string exit = LabelMaker::getLable();
+            fprintf(ic, "\tjmp %s\n", exit.c_str());
+            fprintf(ic, "%s:\n", lFalse.c_str());
+            fprintf(ic, "\tmov cx, 0\n");
+            fprintf(ic, "%s:\n", exit.c_str());
+        }
     }
     if (leftPart == "simple_expression" && rightPart == "term")
     {
@@ -404,6 +508,37 @@ SymbolInfo *SymbolInfo::getIthChildren(int i)
         i--;
     }
     return cur;
+}
+
+string SymbolInfo::getRelopTag(string symbol)
+{
+    string tag = "";
+    if (symbol == "<")
+    {
+        tag = "jl";
+    }
+    else if (symbol == ">")
+    {
+        tag = "jg";
+    }
+    else if (symbol == ">=")
+    {
+        tag = "jge";
+    }
+    else if (symbol == "<=")
+    {
+        tag = "jle";
+    }
+    else if (symbol == "==")
+    {
+        tag = "je";
+    }
+    else if (symbol == "!=")
+    {
+        tag = "jne";
+    }
+
+    return tag;
 }
 
 unsigned long long ScopeTable::hash(const string &str)

@@ -53,6 +53,10 @@ public:
                    // ends
                    // variable use this to hold the offset of the corrosponding ID
 
+    string lTrue;                 // Label if condtion is true
+    string lFalse;                // Label if condition is false
+    string lNext;                 // The next label
+    bool isCond;                  // To recognize whether the expression is coming from a condition or a statement
     vector<int> varDecOffsetList; // This array is used to move Sp during var declaration. Only used by var_declaration
 
     int arraySize; // For array
@@ -74,6 +78,7 @@ public:
     static vector<SymbolInfo *> globalVars;
     void generateCode(FILE *ic, int level);
     SymbolInfo *getIthChildren(int i);
+    string getRelopTag(string symbol);
 };
 
 class ScopeTable
@@ -133,4 +138,16 @@ public:
     vector<SymbolInfo *> getGlobalVars();
     int getStackOffset();
     void setStackOffset(int offset);
+};
+
+class LabelMaker
+{
+public:
+    static int labelCount;
+    static string getLable()
+    {
+        string s = "L" + to_string(labelCount);
+        labelCount++;
+        return s;
+    }
 };

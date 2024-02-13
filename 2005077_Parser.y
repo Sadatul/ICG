@@ -19,6 +19,7 @@ extern FILE* yyin;
 // For keeping track of all the variables
 SymbolTable *symbolTable;
 vector<SymbolInfo *> SymbolInfo::globalVars;
+int LabelMaker::labelCount = 0;
 int stackOffset = 0;
 
 LinkedList vars;
