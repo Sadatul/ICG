@@ -1,14 +1,32 @@
 int main()
 {
-    int a, b, c;
-    a = 5;
-    b = 0;
-    c = 2;
-    if ((a + b) == 6)
-        c++;
-    else
-        c = 0;
-    println(a);
-    println(b);
-    println(c);
+
+    int i, j, k, ll;
+
+    for (i = 0; i < 6; i++)
+    {
+        println(i);
+    }
+
+    k = 4;
+    ll = 6;
+    while (k > 0)
+    {
+        ll = ll + 3;
+        k--;
+    }
+
+    println(ll);
+    println(k);
+
+    k = 4;
+    ll = 6;
+
+    while (k--)
+    {
+        ll = ll + 3;
+    }
+
+    println(ll);
+    println(k);
 }

@@ -233,6 +233,30 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         children->lNext = LabelMaker::getLable();
         children->generateCode(ic, level);
     }
+    if (leftPart == "statement" && rightPart == "FOR LPAREN expression_statement expression_statement expression RPAREN statement")
+    {
+        string loopBegin = LabelMaker::getLable();
+        string exp3Begin = LabelMaker::getLable();
+
+        SymbolInfo *exp1 = getIthChildren(2);
+        SymbolInfo *exp2 = getIthChildren(3);
+        SymbolInfo *exp3 = getIthChildren(4);
+        SymbolInfo *stat = getIthChildren(6);
+
+        exp2->isCond = true;
+        exp2->lTrue = LabelMaker::getLable();
+        exp2->lFalse = lNext;
+        stat->lNext = exp3Begin;
+
+        exp1->generateCode(ic, level);
+        fprintf(ic, "%s:\n", loopBegin.c_str());
+        exp2->generateCode(ic, level);
+        fprintf(ic, "%s:\n", exp2->lTrue.c_str());
+        stat->generateCode(ic, level);
+        fprintf(ic, "%s:\n", exp3Begin.c_str());
+        exp3->generateCode(ic, level);
+        fprintf(ic, "\tjmp %s\n", loopBegin.c_str());
+    }
     if (leftPart == "statement" && rightPart == "IF LPAREN expression RPAREN statement")
     {
         SymbolInfo *exp = getIthChildren(2);
@@ -262,6 +286,24 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         fprintf(ic, "\tjmp %s\n", lNext.c_str());
         fprintf(ic, "%s:\n", exp->lFalse.c_str());
         stat2->generateCode(ic, level);
+    }
+    if (leftPart == "statement" && rightPart == "WHILE LPAREN expression RPAREN statement")
+    {
+        SymbolInfo *exp = getIthChildren(2);
+        SymbolInfo *stat = getIthChildren(4);
+
+        string begin = LabelMaker::getLable();
+        exp->isCond = true;
+        exp->lTrue = LabelMaker::getLable();
+        exp->lFalse = lNext;
+
+        stat->lNext = begin;
+
+        fprintf(ic, "%s:\n", begin.c_str());
+        exp->generateCode(ic, level);
+        fprintf(ic, "%s:\n", exp->lTrue.c_str());
+        stat->generateCode(ic, level);
+        fprintf(ic, "\tjmp %s\n", begin.c_str());
     }
     if (leftPart == "statement" && rightPart == "PRINTLN LPAREN ID RPAREN SEMICOLON")
     {
