@@ -269,6 +269,9 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     if (leftPart == "expression_statement" && rightPart == "expression SEMICOLON")
     {
         printf("INSIDE statemets statement\n");
+        getIthChildren(0)->isCond = isCond;
+        getIthChildren(0)->lTrue = lTrue;
+        getIthChildren(0)->lFalse = lFalse;
         getIthChildren(0)->generateCode(ic, level);
     }
     if (leftPart == "expression" && rightPart == "variable ASSIGNOP logic_expression")
@@ -286,6 +289,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             {
                 fprintf(ic, "\tmov word ptr [bp - %d], cx\n", variable->children->offset);
             }
+        }
+
+        if (isCond)
+        {
+            // Tweaks
         }
     }
     if (leftPart == "expression" && rightPart == "logic_expression")
@@ -353,10 +361,84 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             fprintf(ic, "\tmov cx, 0\n");
             fprintf(ic, "%s:\n", exit.c_str());
         }
+
+        // SymbolInfo *rel1 = getIthChildren(0);
+        // SymbolInfo *rel2 = getIthChildren(2);
+        // string relop = getIthChildren(1)->getName();
+
+        // rel1->isCond = isCond;
+        // rel2->isCond = isCond;
+        // if (relop == "||")
+        // {
+        //     rel1->lTrue = lTrue;
+        //     rel1->lFalse = LabelMaker::getLable();
+        //     rel2->lTrue = lTrue;
+        //     rel2->lFalse = lFalse;
+        // }
+        // else
+        // {
+        //     rel1->lFalse = lFalse;
+        //     rel1->lTrue = LabelMaker::getLable();
+        //     rel2->lFalse = lFalse;
+        //     rel2->lTrue = lTrue;
+        // }
+        // rel1->generateCode(ic, level);
+        // if (isCond)
+        // {
+        //     if (relop == "||")
+        //     {
+        //         fprintf(ic, "%s:\n", rel1->lFalse.c_str());
+        //     }
+        //     else
+        //     {
+        //         fprintf(ic, "%s:\n", rel1->lTrue.c_str());
+        //     }
+        // }
+        // else
+        // {
+        //     fprintf(ic, "\tpush cx\n");
+        // }
+        // rel2->generateCode(ic, level);
+        // if (!isCond)
+        // {
+        //     fprintf(ic, "\tpop ax\n");
+        //     if (relop == "||")
+        //     {
+        //         string labelTrue = LabelMaker::getLable();
+        //         string labelFalse = LabelMaker::getLable();
+        //         fprintf(ic, "\tcmp ax, 0\n");
+        //         fprintf(ic, "\tjne %s\n", labelTrue.c_str());
+        //         fprintf(ic, "\tcmp cx, 0\n");
+        //         fprintf(ic, "\tjne %s\n", labelTrue.c_str());
+        //         fprintf(ic, "\tmov cx, 0\n");
+        //         fprintf(ic, "\tjmp %s\n", labelFalse.c_str());
+        //         fprintf(ic, "%s:\n", labelTrue.c_str());
+        //         fprintf(ic, "\tmov cx, 1\n");
+        //         fprintf(ic, "%s:\n", labelFalse.c_str());
+        //     }
+        //     else if (relop == "&&")
+        //     {
+        //         string labelTrue = LabelMaker::getLable();
+        //         string labelFalse = LabelMaker::getLable();
+        //         fprintf(ic, "\tcmp ax, 0\n");
+        //         fprintf(ic, "\tje %s\n", labelFalse.c_str());
+        //         fprintf(ic, "\tcmp cx, 0\n");
+        //         fprintf(ic, "\tje %s\n", labelFalse.c_str());
+        //         fprintf(ic, "\tmov cx, 1\n");
+        //         fprintf(ic, "\tjmp %s\n", labelTrue.c_str());
+        //         fprintf(ic, "%s:\n", labelFalse.c_str());
+        //         fprintf(ic, "\tmov cx, 0\n");
+        //         fprintf(ic, "%s:\n", labelTrue.c_str());
+        //     }
+        // }
     }
     if (leftPart == "rel_expression" && rightPart == "simple_expression")
     {
-        getIthChildren(0)->generateCode(ic, level);
+        SymbolInfo *child = getIthChildren(0);
+        child->isCond = isCond;
+        child->lTrue = lTrue;
+        child->lFalse = lFalse;
+        child->generateCode(ic, level);
     }
     if (leftPart == "rel_expression" && rightPart == "simple_expression RELOP simple_expression")
     {
@@ -392,7 +474,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     }
     if (leftPart == "simple_expression" && rightPart == "term")
     {
-        getIthChildren(0)->generateCode(ic, level);
+        SymbolInfo *child = getIthChildren(0);
+        child->isCond = isCond;
+        child->lTrue = lTrue;
+        child->lFalse = lFalse;
+        child->generateCode(ic, level);
     }
     if (leftPart == "simple_expression" && rightPart == "simple_expression ADDOP term")
     {
@@ -411,10 +497,19 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             // Need to move the result to cx after substraction.
             fprintf(ic, "\tsub ax, cx\n\tmov cx, ax\n");
         }
+        if (isCond)
+        {
+            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
+        }
     }
     if (leftPart == "term" && rightPart == "unary_expression")
     {
-        getIthChildren(0)->generateCode(ic, level);
+        SymbolInfo *child = getIthChildren(0);
+        child->isCond = isCond;
+        child->lTrue = lTrue;
+        child->lFalse = lFalse;
+        child->generateCode(ic, level);
     }
     if (leftPart == "term" && rightPart == "term MULOP unary_expression")
     {
@@ -444,14 +539,43 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             // As we are expecting to get the result in cx we mov the result to cx
             fprintf(ic, "\tmov cx, dx\n");
         }
+        if (isCond)
+        {
+            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
+        }
     }
+    if (leftPart == "unary_expression" && rightPart == "ADDOP unary_expression")
+    {
+        SymbolInfo *child = getIthChildren(1);
+        child->isCond = isCond;
+        child->lTrue = lTrue;
+        child->lFalse = lFalse;
+        child->generateCode(ic, level);
+        if (getIthChildren(0)->getName() == "-")
+        {
+            fprintf(ic, "\tneg cx\n");
+        }
+    }
+    // if(leftPart == "unary_expression" && rightPart == "NOT unary_expression"){
+
+    // }
     if (leftPart == "unary_expression" && rightPart == "factor")
     {
-        getIthChildren(0)->generateCode(ic, level);
+        SymbolInfo *child = getIthChildren(0);
+        child->isCond = isCond;
+        child->lTrue = lTrue;
+        child->lFalse = lFalse;
+        child->generateCode(ic, level);
     }
     if (leftPart == "factor" && rightPart == "CONST_INT")
     {
         fprintf(ic, "\tmov cx, %s\n", getIthChildren(0)->getName().c_str());
+        if (isCond)
+        {
+            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
+        }
     }
     if (leftPart == "factor" && rightPart == "variable")
     {
@@ -466,6 +590,12 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             {
                 fprintf(ic, "\tmov cx, word ptr [bp - %d]\n", variable->children->offset);
             }
+        }
+
+        if (isCond)
+        {
+            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
         }
     }
     if (leftPart == "factor" && rightPart == "variable INCOP")
@@ -498,6 +628,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
         }
         fprintf(ic, "\tpop cx\n");
+        if (isCond)
+        {
+            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
+        }
     }
     if (leftPart == "factor" && rightPart == "variable DECOP")
     {
@@ -529,6 +664,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
         }
         fprintf(ic, "\tpop cx\n");
+        if (isCond)
+        {
+            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
+        }
     }
     if (leftPart == "statement" && rightPart == "var_declaration")
     {

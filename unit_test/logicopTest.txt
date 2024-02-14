@@ -1,0 +1,59 @@
+int main()
+{
+    int a, b, c;
+    a = 0;
+    b = 6;
+    c = a++ && b;
+    println(c);
+    c = a++ && b;
+    println(c);
+    println(a);
+}
+
+int main()
+{
+    int a, b, c;
+    a = 0;
+    b = 6;
+    c = a >= 0 && b;
+    println(c);
+    c = a++ && b;
+    println(c);
+    println(a);
+}
+
+int main()
+{
+    int a, b, c;
+    a = 0;
+    b = 6;
+    c = a || b;
+    println(c);
+    c = a++ && b;
+    println(c);
+    println(a);
+}
+
+int main()
+{
+    int a, b, c;
+    a = 0;
+    b = 6;
+    c = a || b < 5;
+    println(c);
+    c = a++ && b;
+    println(c);
+    println(a);
+}
+
+int main()
+{
+    int a, b, c;
+    a = 0;
+    b = 6;
+    c = a || b > 5;
+    println(c);
+    c = a++ && b;
+    println(c);
+    println(a);
+}

@@ -1,0 +1,29 @@
+int main()
+{
+    int a, b, c;
+    a = 1 * 2 + 3;
+    b = 1 < 5;
+    c = 2;
+    if (a && b)
+        c++;
+    else
+        c = 0;
+    println(a);
+    println(b);
+    println(c);
+}
+
+int main()
+{
+    int a, b, c;
+    a = 1 * 2 + 3;
+    b = 1 > 5;
+    c = 2;
+    if (a && b)
+        c++;
+    else
+        c = 0;
+    println(a);
+    println(b);
+    println(c);
+}
