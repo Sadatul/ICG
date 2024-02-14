@@ -571,9 +571,27 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             fprintf(ic, "\tneg cx\n");
         }
     }
-    // if(leftPart == "unary_expression" && rightPart == "NOT unary_expression"){
+    if (leftPart == "unary_expression" && rightPart == "NOT unary_expression")
+    {
+        SymbolInfo *unExp = getIthChildren(1);
+        unExp->isCond = isCond;
 
-    // }
+        // Borat says very nice
+        unExp->lTrue = lFalse;
+        unExp->lFalse = lTrue;
+        unExp->generateCode(ic, level);
+        if (!isCond)
+        {
+            string toOne = LabelMaker::getLable();
+            string toEnd = LabelMaker::getLable();
+            fprintf(ic, "\tjcxz %s\n", toOne.c_str());
+            fprintf(ic, "\tmov cx, 0\n");
+            fprintf(ic, "\tjmp %s\n", toEnd.c_str());
+            fprintf(ic, "%s:\n", toOne.c_str());
+            fprintf(ic, "\tmov cx, 1\n");
+            fprintf(ic, "%s:\n", toEnd.c_str());
+        }
+    }
     if (leftPart == "unary_expression" && rightPart == "factor")
     {
         SymbolInfo *child = getIthChildren(0);
@@ -602,6 +620,14 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
             fprintf(ic, "\tjmp %s\n", lTrue.c_str());
         }
+    }
+    if (leftPart == "factor" && rightPart == "LPAREN expression RPAREN")
+    {
+        SymbolInfo *exp = getIthChildren(1);
+        exp->isCond = isCond;
+        exp->lTrue = lTrue;
+        exp->lFalse = lFalse;
+        exp->generateCode(ic, level);
     }
     if (leftPart == "factor" && rightPart == "CONST_INT")
     {

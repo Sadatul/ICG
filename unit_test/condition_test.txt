@@ -57,3 +57,52 @@ int main()
 }
 
 output -> 0
+
+int main()
+{
+    int a, b, c;
+    a = 5;
+    b = 0;
+    c = 2;
+    if (a && (b && c))
+        c++;
+    else
+        c = 0;
+    println(a);
+    println(b);
+    println(c);
+}
+
+output -> 5 0 0
+
+int main()
+{
+    int a, b, c;
+    a = 5;
+    b = 0;
+    c = 2;
+    if (a >= 5 && (c == 2 || b++))
+        c++;
+    else
+        c = 0;
+    println(a);
+    println(b);
+    println(c);
+}
+output -> 5 0 3
+
+int main()
+{
+    int a, b, c;
+    a = 5;
+    b = 0;
+    c = 2;
+    if ((a + b) == 6)
+        c++;
+    else
+        c = 0;
+    println(a);
+    println(b);
+    println(c);
+}
+output -> 5 0 0
