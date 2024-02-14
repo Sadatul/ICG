@@ -1,32 +1,21 @@
 int main()
 {
+    int i;
+    if (i > 0 || i < 10)
+        i = 100;
+    else
+        i = 200;
 
-    int i, j, k, ll;
+    if (i > 20 && i < 30)
+        i = 300;
+    else
+        i = 400;
 
-    for (i = 0; i < 6; i++)
-    {
-        println(i);
-    }
+    if ((i > 40 && i < 50) || (i < 60 && i > 70))
+        i = 500;
+    else
+        i = 600;
+    println(i);
 
-    k = 4;
-    ll = 6;
-    while (k > 0)
-    {
-        ll = ll + 3;
-        k--;
-    }
-
-    println(ll);
-    println(k);
-
-    k = 4;
-    ll = 6;
-
-    while (k--)
-    {
-        ll = ll + 3;
-    }
-
-    println(ll);
-    println(k);
+    return 0;
 }

@@ -19,7 +19,7 @@ print_output proc  ;print what is in ax
     push si
     lea si,number
     mov bx,10
-    add si,3
+    add si,4
     cmp ax,0
     jnge negate
     print:

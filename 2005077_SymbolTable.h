@@ -52,6 +52,7 @@ public:
                    // the stack offset that needs tobe added...after the function
                    // ends
                    // variable use this to hold the offset of the corrosponding ID
+                   // parameter_list uses this to hold the number of parameters.
 
     string lTrue;                 // Label if condtion is true
     string lFalse;                // Label if condition is false
@@ -79,6 +80,7 @@ public:
     void generateCode(FILE *ic, int level);
     SymbolInfo *getIthChildren(int i);
     string getRelopTag(string symbol);
+    string getLocalVar(int offset);
 };
 
 class ScopeTable

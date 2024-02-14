@@ -115,8 +115,8 @@ void SymbolInfo::generateCode(FILE *ic, int level)
 
     if (leftPart == "start" && rightPart == "program")
     {
-        string header_details = ".model small\n.stack 100h\n";
-        string dataSeg = ".data\n\tnumber db \"0000$\"\n";
+        string header_details = ".model small\n.stack 1000h\n";
+        string dataSeg = ".data\n\tnumber db \"00000$\"\n";
         fprintf(ic, "%s", header_details.c_str());
         fprintf(ic, "%s", dataSeg.c_str());
         for (SymbolInfo *i : globalVars)
@@ -137,6 +137,8 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         char ch;
         while ((ch = fgetc(lib)) != EOF)
             fputc(ch, ic);
+
+        fprintf(ic, "\nend main\n");
     }
     if (leftPart == "program" && rightPart == "program unit")
     {
@@ -153,6 +155,31 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     {
         printf("INSIDE unit\n");
         children->generateCode(ic, level);
+    }
+    if (leftPart == "func_definition" && rightPart == "type_specifier ID LPAREN parameter_list RPAREN compound_statement")
+    {
+        fprintf(ic, "%s proc\n", getIthChildren(1)->getName().c_str());
+        if (getIthChildren(1)->getName() == "main")
+        {
+            fprintf(ic, "\tmov ax, @data\n");
+            fprintf(ic, "\tmov ds, ax\n");
+        }
+        fprintf(ic, "\tpush bp\n");
+        fprintf(ic, "\tmov bp, sp\n");
+        getIthChildren(5)->generateCode(ic, level);
+        fprintf(ic, "%s_exit:\n", getIthChildren(1)->getName().c_str());
+        if (getIthChildren(1)->getName() == "main")
+        {
+            fprintf(ic, "\tmov ax, 04ch\n");
+            fprintf(ic, "\tint 21h\n");
+        }
+        fprintf(ic, "\tadd sp, %d\n", getIthChildren(5)->offset);
+        fprintf(ic, "\tpop bp\n");
+        if (getIthChildren(1)->getName() != "main")
+        {
+            fprintf(ic, "\tret %d\n", getIthChildren(3)->offset * 2);
+        }
+        fprintf(ic, "%s endp\n", getIthChildren(1)->getName().c_str());
     }
     if (leftPart == "func_definition" && rightPart == "type_specifier ID LPAREN RPAREN compound_statement")
     {
@@ -175,6 +202,10 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         }
         fprintf(ic, "\tadd sp, %d\n", getIthChildren(4)->offset);
         fprintf(ic, "\tpop bp\n");
+        if (getIthChildren(1)->getName() != "main")
+        {
+            fprintf(ic, "\tret\n");
+        }
         fprintf(ic, "%s endp\n", getIthChildren(1)->getName().c_str());
     }
     if (leftPart == "compound_statement" && rightPart == "LCURL statements RCURL")
@@ -316,10 +347,17 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         }
         else
         {
-            fprintf(ic, "\tmov ax, word ptr [bp - %d]\n", id->offset);
+            fprintf(ic, "\tmov ax, %s\n", getLocalVar(id->offset).c_str());
             fprintf(ic, "\tcall print_output\n");
             fprintf(ic, "\tcall new_line\n");
         }
+    }
+    if (leftPart == "statement" && rightPart == "RETURN expression SEMICOLON")
+    {
+        getIthChildren(1)->generateCode(ic, level);
+        fprintf(ic, "\tmov dx, cx\n");
+        // function name is being passed via statement
+        fprintf(ic, "\tjmp %s_exit\n", getName().c_str());
     }
     if (leftPart == "expression_statement" && rightPart == "expression SEMICOLON")
     {
@@ -342,7 +380,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
             else
             {
-                fprintf(ic, "\tmov word ptr [bp - %d], cx\n", variable->children->offset);
+                fprintf(ic, "\tmov %s, cx\n", getLocalVar(variable->children->offset).c_str());
             }
         }
 
@@ -653,10 +691,21 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
             else
             {
-                fprintf(ic, "\tmov cx, word ptr [bp - %d]\n", variable->children->offset);
+                fprintf(ic, "\tmov cx, %s\n", getLocalVar(variable->children->offset).c_str());
             }
         }
 
+        if (isCond)
+        {
+            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
+        }
+    }
+    if (leftPart == "factor" && rightPart == "ID LPAREN argument_list RPAREN")
+    {
+        getIthChildren(2)->generateCode(ic, level);
+        fprintf(ic, "\tcall %s\n", getIthChildren(0)->getName().c_str());
+        fprintf(ic, "\tmov cx, dx\n");
         if (isCond)
         {
             fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
@@ -691,7 +740,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
             else
             {
-                fprintf(ic, "\tmov cx, word ptr [bp - %d]\n", variable->children->offset);
+                fprintf(ic, "\tmov cx, %s\n", getLocalVar(variable->children->offset).c_str());
             }
         }
         // cx must retain the old value
@@ -706,7 +755,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
             else
             {
-                fprintf(ic, "\tmov word ptr [bp - %d], cx\n", variable->children->offset);
+                fprintf(ic, "\tmov %s, cx\n", getLocalVar(variable->children->offset).c_str());
             }
         }
         fprintf(ic, "\tpop cx\n");
@@ -727,7 +776,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
             else
             {
-                fprintf(ic, "\tmov cx, word ptr [bp - %d]\n", variable->children->offset);
+                fprintf(ic, "\tmov cx, %s\n", getLocalVar(variable->children->offset).c_str());
             }
         }
         // cx must retain the old value
@@ -742,7 +791,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
             else
             {
-                fprintf(ic, "\tmov word ptr [bp - %d], cx\n", variable->children->offset);
+                fprintf(ic, "\tmov %s, cx\n", getLocalVar(variable->children->offset).c_str());
             }
         }
         fprintf(ic, "\tpop cx\n");
@@ -751,6 +800,21 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
             fprintf(ic, "\tjmp %s\n", lTrue.c_str());
         }
+    }
+    if (leftPart == "argument_list" && rightPart == "arguments")
+    {
+        children->generateCode(ic, level);
+    }
+    if (leftPart == "arguments" && rightPart == "arguments COMMA logic_expression")
+    {
+        getIthChildren(2)->generateCode(ic, level);
+        fprintf(ic, "\tpush cx\n");
+        getIthChildren(0)->generateCode(ic, level);
+    }
+    if (leftPart == "arguments" && rightPart == "logic_expression")
+    {
+        children->generateCode(ic, level);
+        fprintf(ic, "\tpush cx\n");
     }
 }
 
@@ -799,6 +863,18 @@ string SymbolInfo::getRelopTag(string symbol)
     }
 
     return tag;
+}
+
+string SymbolInfo::getLocalVar(int offset)
+{
+    if (offset < 0)
+    {
+        return "word ptr [bp + " + to_string(abs(offset)) + "]";
+    }
+    else
+    {
+        return "word ptr [bp - " + to_string(abs(offset)) + "]";
+    }
 }
 
 unsigned long long ScopeTable::hash(const string &str)

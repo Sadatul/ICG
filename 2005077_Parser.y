@@ -302,6 +302,8 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					if($4->error){
 						fprintf(errorout, "Line# %d: Syntax error at parameter list of function definition\n", $1->startLine);
 					}
+
+					$4->offset = params.getLength();
 					
 					SymbolInfo *func = symbolTable->lookUp(name);
 					if(func == NULL){
@@ -400,6 +402,9 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					funcName = "";
 					params.clear();
 					paramErrorFlag = false;
+
+					$7->offset = stackOffset;
+					stackOffset = 0;
 				}
 				|
 				type_specifier ID LPAREN RPAREN
@@ -470,6 +475,9 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					funcName = "";
 					params.clear();
 					paramErrorFlag = false;
+
+					$6->offset = stackOffset;
+					stackOffset = 0;
 				}
 				;
 parameter_list : parameter_list COMMA type_specifier ID
@@ -618,8 +626,8 @@ compound_statement : LCURL ENTER_SCOPE statements RCURL
 						fprintf(logout, "compound_statement : LCURL statements RCURL  \n");
 
 						symbolTable->printAllScopeTableInFile(logout);
-						$$->offset = stackOffset;
-						stackOffset = 0;
+						// $$->offset = stackOffset;
+						// stackOffset = 0;
 						symbolTable->exitScope();
 				   }
 				   |
@@ -645,10 +653,16 @@ compound_statement : LCURL ENTER_SCOPE statements RCURL
 ENTER_SCOPE :
 			{
 				symbolTable->enterScope();
-				SymbolInfo *tmp = params.head;
-				while(tmp != NULL){
+				SymbolInfo *cur = params.head;
+				int paramOffset = 2; // First parameter is going to be on bp + 4
+				while(cur != NULL){
 					// symbolTable->insert(tmp->getName(), tmp->getType(), 0);
-					tmp = tmp->next;
+					SymbolInfo *tmp = new SymbolInfo(cur->getName(), cur->getType(), 0);
+					paramOffset += 2;
+					tmp->offset = -paramOffset;
+					tmp->isGlobal = false;
+					bool inserted = symbolTable->insert(tmp);
+					cur = cur->next;
 				}
 				// params.clear();
 				// printf("Cleared Params\n");
@@ -1044,7 +1058,7 @@ statement : var_declaration
 		  |
 		  RETURN expression SEMICOLON
 		  {
-			SymbolInfo *tmp = new SymbolInfo("statement", "statement");
+			SymbolInfo *tmp = new SymbolInfo(funcName, "statement");
 			tmp->leftPart = "statement";
 			tmp->rightPart = "RETURN expression SEMICOLON";
 			tmp->startLine = $1->startLine;
