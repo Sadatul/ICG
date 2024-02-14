@@ -188,6 +188,14 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         getIthChildren(1)->lNext = lNext;
         getIthChildren(1)->generateCode(ic, level);
     }
+    if (leftPart == "var_declaration" && rightPart == "type_specifier declaration_list SEMICOLON")
+    {
+        printf("INSIDE var_declaration %d\n", varDecOffsetList.size());
+        for (int i : varDecOffsetList)
+        {
+            fprintf(ic, "\tsub sp, %d\n", i);
+        }
+    }
     if (leftPart == "statements" && rightPart == "statements statement")
     {
         printf("INSIDE statemets statement\n");
@@ -204,6 +212,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         children->lNext = lNext;
         children->generateCode(ic, level);
         fprintf(ic, "%s:\n", lNext.c_str());
+    }
+    if (leftPart == "statement" && rightPart == "var_declaration")
+    {
+        printf("INSIDE statemet\n");
+        children->generateCode(ic, level);
     }
     if (leftPart == "statement" && rightPart == "expression_statement")
     {
@@ -569,15 +582,6 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         child->lFalse = lFalse;
         child->generateCode(ic, level);
     }
-    if (leftPart == "factor" && rightPart == "CONST_INT")
-    {
-        fprintf(ic, "\tmov cx, %s\n", getIthChildren(0)->getName().c_str());
-        if (isCond)
-        {
-            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
-            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
-        }
-    }
     if (leftPart == "factor" && rightPart == "variable")
     {
         SymbolInfo *variable = children;
@@ -593,6 +597,15 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
         }
 
+        if (isCond)
+        {
+            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
+        }
+    }
+    if (leftPart == "factor" && rightPart == "CONST_INT")
+    {
+        fprintf(ic, "\tmov cx, %s\n", getIthChildren(0)->getName().c_str());
         if (isCond)
         {
             fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
@@ -669,19 +682,6 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         {
             fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
             fprintf(ic, "\tjmp %s\n", lTrue.c_str());
-        }
-    }
-    if (leftPart == "statement" && rightPart == "var_declaration")
-    {
-        printf("INSIDE statemet\n");
-        children->generateCode(ic, level);
-    }
-    if (leftPart == "var_declaration" && rightPart == "type_specifier declaration_list SEMICOLON")
-    {
-        printf("INSIDE var_declaration %d\n", varDecOffsetList.size());
-        for (int i : varDecOffsetList)
-        {
-            fprintf(ic, "\tsub sp, %d\n", i);
         }
     }
 }

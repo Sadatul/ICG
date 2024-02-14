@@ -10,6 +10,8 @@ int main()
     println(a);
 }
 
+output-> 0 1 2
+
 int main()
 {
     int a, b, c;
@@ -21,6 +23,8 @@ int main()
     println(c);
     println(a);
 }
+
+output-> 1 0 1
 
 int main()
 {
@@ -34,6 +38,8 @@ int main()
     println(a);
 }
 
+output-> 1 0 1
+
 int main()
 {
     int a, b, c;
@@ -46,6 +52,8 @@ int main()
     println(a);
 }
 
+output-> 0 0 1
+
 int main()
 {
     int a, b, c;
@@ -57,3 +65,5 @@ int main()
     println(c);
     println(a);
 }
+
+output-> 1 0 1

@@ -13,6 +13,8 @@ int main()
     println(c);
 }
 
+Output -> 5 1 3
+
 int main()
 {
     int a, b, c;
@@ -28,6 +30,8 @@ int main()
     println(c);
 }
 
+Output -> 5 0 0
+
 int main()
 {
     int a, b, c;
@@ -38,3 +42,18 @@ int main()
     }
     println(a);
 }
+
+output -> 6 6
+
+int main()
+{
+    int a, b, c;
+    a = 10;
+    if (a = 0)
+    {
+        println(a);
+    }
+    println(a);
+}
+
+output -> 0
