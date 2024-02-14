@@ -293,7 +293,8 @@ void SymbolInfo::generateCode(FILE *ic, int level)
 
         if (isCond)
         {
-            // Tweaks
+            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjmp %s\n", lTrue.c_str());
         }
     }
     if (leftPart == "expression" && rightPart == "logic_expression")
