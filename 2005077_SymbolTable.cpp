@@ -98,21 +98,6 @@ void SymbolInfo::setNext(SymbolInfo *next)
 
 void SymbolInfo::generateCode(FILE *ic, int level)
 {
-    // FILE *lib = fopen("printLibrary.txt", "r");
-    // char ch;
-    // if (lib != NULL)
-    // {
-    //     string codeSeg = ".code\nmain proc\n\tmov ax, @data\n\tmov ds, ax\n";
-
-    //     fprintf(ic, "%s", codeSeg.c_str());
-    //     string test = "\tmov ax, 10\n\tcall print_output\n\tmov ah, 04ch\n\tint 21h\n\tmain endp\n";
-    //     fprintf(ic, "%s", test.c_str());
-
-    //     while ((ch = fgetc(lib)) != EOF)
-    //         fputc(ch, ic);
-    // }
-    // printf("File copied successfully.");
-
     if (leftPart == "start" && rightPart == "program")
     {
         string header_details = ".model small\n.stack 1000h\n";
@@ -158,7 +143,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     }
     if (leftPart == "func_definition" && rightPart == "type_specifier ID LPAREN parameter_list RPAREN compound_statement")
     {
-        fprintf(ic, "%s proc\n", getIthChildren(1)->getName().c_str());
+        fprintf(ic, "%s proc\t;Line %d\n", getIthChildren(1)->getName().c_str(), getIthChildren(0)->startLine);
         if (getIthChildren(1)->getName() == "main")
         {
             fprintf(ic, "\tmov ax, @data\n");
@@ -185,7 +170,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     {
         printf("INSIDE func_def\n");
         // children->next->next->next->next->generateCode(ic, level);
-        fprintf(ic, "%s proc\n", getIthChildren(1)->getName().c_str());
+        fprintf(ic, "%s proc\t;Line %d\n", getIthChildren(1)->getName().c_str(), getIthChildren(0)->startLine);
         if (getIthChildren(1)->getName() == "main")
         {
             fprintf(ic, "\tmov ax, @data\n");
@@ -224,7 +209,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         printf("INSIDE var_declaration %d\n", varDecOffsetList.size());
         for (int i : varDecOffsetList)
         {
-            fprintf(ic, "\tsub sp, %d\n", i);
+            fprintf(ic, "\tsub sp, %d\t;Line %d\n", i, startLine);
         }
     }
     if (leftPart == "statements" && rightPart == "statements statement")
@@ -235,14 +220,14 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         getIthChildren(0)->generateCode(ic, level);
         // The label that needs to be printed here will be recursively printed.
         getIthChildren(1)->generateCode(ic, level);
-        fprintf(ic, "%s:\n", lNext.c_str());
+        fprintf(ic, "%s:\t;Line %d\n", lNext.c_str(), startLine);
     }
     if (leftPart == "statements" && rightPart == "statement")
     {
         printf("INSIDE statemets\n");
         children->lNext = lNext;
         children->generateCode(ic, level);
-        fprintf(ic, "%s:\n", lNext.c_str());
+        fprintf(ic, "%s:\t;Line %d\n", lNext.c_str(), startLine);
     }
     if (leftPart == "statement" && rightPart == "var_declaration")
     {
@@ -280,13 +265,13 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         stat->lNext = exp3Begin;
 
         exp1->generateCode(ic, level);
-        fprintf(ic, "%s:\n", loopBegin.c_str());
+        fprintf(ic, "%s:\t;Line %d\n", loopBegin.c_str(), startLine);
         exp2->generateCode(ic, level);
-        fprintf(ic, "%s:\n", exp2->lTrue.c_str());
+        fprintf(ic, "%s:\t;Line %d\n", exp2->lTrue.c_str(), startLine);
         stat->generateCode(ic, level);
-        fprintf(ic, "%s:\n", exp3Begin.c_str());
+        fprintf(ic, "%s:\t;Line %d\n", exp3Begin.c_str(), startLine);
         exp3->generateCode(ic, level);
-        fprintf(ic, "\tjmp %s\n", loopBegin.c_str());
+        fprintf(ic, "\tjmp %s\t;Line %d\n", loopBegin.c_str(), startLine);
     }
     if (leftPart == "statement" && rightPart == "IF LPAREN expression RPAREN statement")
     {
@@ -296,7 +281,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         exp->lFalse = lNext;
         getIthChildren(4)->lNext = lNext;
         exp->generateCode(ic, level);
-        fprintf(ic, "%s:\n", exp->lTrue.c_str());
+        fprintf(ic, "%s:\t;Line %d\n", exp->lTrue.c_str(), startLine);
         getIthChildren(4)->generateCode(ic, level);
     }
     if (leftPart == "statement" && rightPart == "IF LPAREN expression RPAREN statement ELSE statement")
@@ -312,10 +297,10 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         stat1->lNext = lNext;
         stat2->lNext = lNext;
         exp->generateCode(ic, level);
-        fprintf(ic, "%s:\n", exp->lTrue.c_str());
+        fprintf(ic, "%s:\t;Line %d\n", exp->lTrue.c_str(), startLine);
         stat1->generateCode(ic, level);
-        fprintf(ic, "\tjmp %s\n", lNext.c_str());
-        fprintf(ic, "%s:\n", exp->lFalse.c_str());
+        fprintf(ic, "\tjmp %s\t;Line %d\n", lNext.c_str(), startLine);
+        fprintf(ic, "%s:\t;Line %d\n", exp->lFalse.c_str(), startLine);
         stat2->generateCode(ic, level);
     }
     if (leftPart == "statement" && rightPart == "WHILE LPAREN expression RPAREN statement")
@@ -330,11 +315,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
 
         stat->lNext = begin;
 
-        fprintf(ic, "%s:\n", begin.c_str());
+        fprintf(ic, "%s: \t;Line %d\n", begin.c_str(), startLine);
         exp->generateCode(ic, level);
-        fprintf(ic, "%s:\n", exp->lTrue.c_str());
+        fprintf(ic, "%s: \t;Line %d\n", exp->lTrue.c_str(), startLine);
         stat->generateCode(ic, level);
-        fprintf(ic, "\tjmp %s\n", begin.c_str());
+        fprintf(ic, "\tjmp %s \t;Line %d\n", begin.c_str(), startLine);
     }
     if (leftPart == "statement" && rightPart == "PRINTLN LPAREN ID RPAREN SEMICOLON")
     {
@@ -342,22 +327,22 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         if (id->isGlobal)
         {
             fprintf(ic, "\tmov ax, %s\n", id->getName().c_str());
-            fprintf(ic, "\tcall print_output\n");
+            fprintf(ic, "\tcall print_output \t;Line %d\n", startLine);
             fprintf(ic, "\tcall new_line\n");
         }
         else
         {
             fprintf(ic, "\tmov ax, %s\n", getLocalVar(id->offset).c_str());
-            fprintf(ic, "\tcall print_output\n");
+            fprintf(ic, "\tcall print_output \t;Line %d\n", startLine);
             fprintf(ic, "\tcall new_line\n");
         }
     }
     if (leftPart == "statement" && rightPart == "RETURN expression SEMICOLON")
     {
         getIthChildren(1)->generateCode(ic, level);
-        fprintf(ic, "\tmov dx, cx\n");
+        fprintf(ic, "\tmov dx, cx \t;Line %d\n", startLine);
         // function name is being passed via statement
-        fprintf(ic, "\tjmp %s_exit\n", getName().c_str());
+        fprintf(ic, "\tjmp %s_exit \t;Line %d\n", getName().c_str(), startLine);
     }
     if (leftPart == "expression_statement" && rightPart == "expression SEMICOLON")
     {
@@ -376,11 +361,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         {
             if (variable->children->isGlobal)
             {
-                fprintf(ic, "\tmov %s, cx\n", variable->children->getName().c_str());
+                fprintf(ic, "\tmov %s, cx \t;Line %d\n", variable->children->getName().c_str(), startLine);
             }
             else
             {
-                fprintf(ic, "\tmov %s, cx\n", getLocalVar(variable->children->offset).c_str());
+                fprintf(ic, "\tmov %s, cx \t;Line %d\n", getLocalVar(variable->children->offset).c_str(), startLine);
             }
         }
         else
@@ -388,7 +373,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             // Variable is an array.
             // variable : ID LSQUARE expression RSQUARE
             // as cx will be overwritten
-            fprintf(ic, "\tmov ax, cx\n");
+            fprintf(ic, "\tmov ax, cx \t;Line %d\n", startLine);
             variable->getIthChildren(2)->generateCode(ic, level);
             if (variable->children->isGlobal)
             {
@@ -410,7 +395,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
 
         if (isCond)
         {
-            fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
+            fprintf(ic, "\tjcxz %s \t;Line %d\n", lFalse.c_str(), startLine);
             fprintf(ic, "\tjmp %s\n", lTrue.c_str());
         }
     }
@@ -461,11 +446,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         rel1->generateCode(ic, level);
         if (relop == "||")
         {
-            fprintf(ic, "%s:\n", rel1->lFalse.c_str());
+            fprintf(ic, "%s: \t;Line %d\n", rel1->lFalse.c_str(), startLine);
         }
         else
         {
-            fprintf(ic, "%s:\n", rel1->lTrue.c_str());
+            fprintf(ic, "%s: \t;Line %d\n", rel1->lTrue.c_str(), startLine);
         }
         rel2->generateCode(ic, level);
 
@@ -479,76 +464,6 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             fprintf(ic, "\tmov cx, 0\n");
             fprintf(ic, "%s:\n", exit.c_str());
         }
-
-        // SymbolInfo *rel1 = getIthChildren(0);
-        // SymbolInfo *rel2 = getIthChildren(2);
-        // string relop = getIthChildren(1)->getName();
-
-        // rel1->isCond = isCond;
-        // rel2->isCond = isCond;
-        // if (relop == "||")
-        // {
-        //     rel1->lTrue = lTrue;
-        //     rel1->lFalse = LabelMaker::getLable();
-        //     rel2->lTrue = lTrue;
-        //     rel2->lFalse = lFalse;
-        // }
-        // else
-        // {
-        //     rel1->lFalse = lFalse;
-        //     rel1->lTrue = LabelMaker::getLable();
-        //     rel2->lFalse = lFalse;
-        //     rel2->lTrue = lTrue;
-        // }
-        // rel1->generateCode(ic, level);
-        // if (isCond)
-        // {
-        //     if (relop == "||")
-        //     {
-        //         fprintf(ic, "%s:\n", rel1->lFalse.c_str());
-        //     }
-        //     else
-        //     {
-        //         fprintf(ic, "%s:\n", rel1->lTrue.c_str());
-        //     }
-        // }
-        // else
-        // {
-        //     fprintf(ic, "\tpush cx\n");
-        // }
-        // rel2->generateCode(ic, level);
-        // if (!isCond)
-        // {
-        //     fprintf(ic, "\tpop ax\n");
-        //     if (relop == "||")
-        //     {
-        //         string labelTrue = LabelMaker::getLable();
-        //         string labelFalse = LabelMaker::getLable();
-        //         fprintf(ic, "\tcmp ax, 0\n");
-        //         fprintf(ic, "\tjne %s\n", labelTrue.c_str());
-        //         fprintf(ic, "\tcmp cx, 0\n");
-        //         fprintf(ic, "\tjne %s\n", labelTrue.c_str());
-        //         fprintf(ic, "\tmov cx, 0\n");
-        //         fprintf(ic, "\tjmp %s\n", labelFalse.c_str());
-        //         fprintf(ic, "%s:\n", labelTrue.c_str());
-        //         fprintf(ic, "\tmov cx, 1\n");
-        //         fprintf(ic, "%s:\n", labelFalse.c_str());
-        //     }
-        //     else if (relop == "&&")
-        //     {
-        //         string labelTrue = LabelMaker::getLable();
-        //         string labelFalse = LabelMaker::getLable();
-        //         fprintf(ic, "\tcmp ax, 0\n");
-        //         fprintf(ic, "\tje %s\n", labelFalse.c_str());
-        //         fprintf(ic, "\tcmp cx, 0\n");
-        //         fprintf(ic, "\tje %s\n", labelFalse.c_str());
-        //         fprintf(ic, "\tmov cx, 1\n");
-        //         fprintf(ic, "\tjmp %s\n", labelTrue.c_str());
-        //         fprintf(ic, "%s:\n", labelFalse.c_str());
-        //         fprintf(ic, "\tmov cx, 0\n");
-        //         fprintf(ic, "%s:\n", labelTrue.c_str());
-        //     }
-        // }
     }
     if (leftPart == "rel_expression" && rightPart == "simple_expression")
     {
@@ -561,7 +476,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     if (leftPart == "rel_expression" && rightPart == "simple_expression RELOP simple_expression")
     {
         getIthChildren(0)->generateCode(ic, level);
-        fprintf(ic, "\tpush cx\n");
+        fprintf(ic, "\tpush cx \t;Line %d\n", startLine);
         getIthChildren(2)->generateCode(ic, level);
         fprintf(ic, "\tpop ax\n");
         // Value of first simp_exp is in ax and 2nd simp_exp is in cx
@@ -601,7 +516,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     if (leftPart == "simple_expression" && rightPart == "simple_expression ADDOP term")
     {
         getIthChildren(0)->generateCode(ic, level);
-        fprintf(ic, "\tpush cx\n");
+        fprintf(ic, "\tpush cx \t;Line %d\n", startLine);
         getIthChildren(2)->generateCode(ic, level);
         fprintf(ic, "\tpop ax\n");
         // Now we have the value of simple_exp in ax and term in cx
@@ -632,7 +547,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     if (leftPart == "term" && rightPart == "term MULOP unary_expression")
     {
         getIthChildren(0)->generateCode(ic, level);
-        fprintf(ic, "\tpush cx\n");
+        fprintf(ic, "\tpush cx \t;Line %d\n", startLine);
         getIthChildren(2)->generateCode(ic, level);
         fprintf(ic, "\tpop ax\n");
         // Now we have the value of term in ax and unary_exp in cx
@@ -672,7 +587,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         child->generateCode(ic, level);
         if (getIthChildren(0)->getName() == "-")
         {
-            fprintf(ic, "\tneg cx\n");
+            fprintf(ic, "\tneg cx \t;Line %d\n", startLine);
         }
     }
     if (leftPart == "unary_expression" && rightPart == "NOT unary_expression")
@@ -688,7 +603,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         {
             string toOne = LabelMaker::getLable();
             string toEnd = LabelMaker::getLable();
-            fprintf(ic, "\tjcxz %s\n", toOne.c_str());
+            fprintf(ic, "\tjcxz %s \t;Line %d\n", toOne.c_str(), startLine);
             fprintf(ic, "\tmov cx, 0\n");
             fprintf(ic, "\tjmp %s\n", toEnd.c_str());
             fprintf(ic, "%s:\n", toOne.c_str());
@@ -711,11 +626,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         {
             if (variable->children->isGlobal)
             {
-                fprintf(ic, "\tmov cx, %s\n", variable->children->getName().c_str());
+                fprintf(ic, "\tmov cx, %s \t;Line %d\n", variable->children->getName().c_str(), startLine);
             }
             else
             {
-                fprintf(ic, "\tmov cx, %s\n", getLocalVar(variable->children->offset).c_str());
+                fprintf(ic, "\tmov cx, %s \t;Line %d\n", getLocalVar(variable->children->offset).c_str(), startLine);
             }
         }
         else
@@ -725,13 +640,13 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             variable->getIthChildren(2)->generateCode(ic, level);
             if (variable->children->isGlobal)
             {
-                fprintf(ic, "\tmov bx, cx\n");
+                fprintf(ic, "\tmov bx, cx \t;Line %d\n", startLine);
                 fprintf(ic, "\tadd bx, bx\n");
                 fprintf(ic, "\tmov cx, word ptr %s[bx]\n", variable->children->getName().c_str());
             }
             else
             {
-                fprintf(ic, "\tpush bp\n");
+                fprintf(ic, "\tpush bp \t;Line %d\n", startLine);
                 fprintf(ic, "\tsub bp, %d\n", variable->children->offset);
                 fprintf(ic, "\tadd cx, cx\n");
                 fprintf(ic, "\tadd bp, cx\n");
@@ -749,7 +664,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     if (leftPart == "factor" && rightPart == "ID LPAREN argument_list RPAREN")
     {
         getIthChildren(2)->generateCode(ic, level);
-        fprintf(ic, "\tcall %s\n", getIthChildren(0)->getName().c_str());
+        fprintf(ic, "\tcall %s \t;Line %d\n", getIthChildren(0)->getName().c_str(), startLine);
         fprintf(ic, "\tmov cx, dx\n");
         if (isCond)
         {
@@ -767,7 +682,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     }
     if (leftPart == "factor" && rightPart == "CONST_INT")
     {
-        fprintf(ic, "\tmov cx, %s\n", getIthChildren(0)->getName().c_str());
+        fprintf(ic, "\tmov cx, %s \t;Line %d\n", getIthChildren(0)->getName().c_str(), startLine);
         if (isCond)
         {
             fprintf(ic, "\tjcxz %s\n", lFalse.c_str());
@@ -781,11 +696,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         {
             if (variable->children->isGlobal)
             {
-                fprintf(ic, "\tmov cx, %s\n", variable->children->getName().c_str());
+                fprintf(ic, "\tmov cx, %s \t;Line %d\n", variable->children->getName().c_str(), startLine);
             }
             else
             {
-                fprintf(ic, "\tmov cx, %s\n", getLocalVar(variable->children->offset).c_str());
+                fprintf(ic, "\tmov cx, %s \t;Line %d\n", getLocalVar(variable->children->offset).c_str(), startLine);
             }
         }
         else
@@ -795,13 +710,13 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             variable->getIthChildren(2)->generateCode(ic, level);
             if (variable->children->isGlobal)
             {
-                fprintf(ic, "\tmov bx, cx\n");
+                fprintf(ic, "\tmov bx, cx \t;Line %d\n", startLine);
                 fprintf(ic, "\tadd bx, bx\n");
                 fprintf(ic, "\tmov cx, word ptr %s[bx]\n", variable->children->getName().c_str());
             }
             else
             {
-                fprintf(ic, "\tpush bp\n");
+                fprintf(ic, "\tpush bp \t;Line %d\n", startLine);
                 fprintf(ic, "\tsub bp, %d\n", variable->children->offset);
                 fprintf(ic, "\tadd cx, cx\n");
                 fprintf(ic, "\tadd bp, cx\n");
@@ -811,18 +726,18 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         }
 
         // cx must retain the old value
-        fprintf(ic, "\tpush cx\n");
-        fprintf(ic, "\tinc cx\n");
+        fprintf(ic, "\tpush cx \t;Line %d\n", startLine);
+        fprintf(ic, "\tinc cx \t;Line %d\n", startLine);
 
         if (variable->rightPart == "ID")
         {
             if (variable->children->isGlobal)
             {
-                fprintf(ic, "\tmov %s, cx\n", variable->children->getName().c_str());
+                fprintf(ic, "\tmov %s, cx \t;Line %d\n", variable->children->getName().c_str(), startLine);
             }
             else
             {
-                fprintf(ic, "\tmov %s, cx\n", getLocalVar(variable->children->offset).c_str());
+                fprintf(ic, "\tmov %s, cx \t;Line %d\n", getLocalVar(variable->children->offset).c_str(), startLine);
             }
         }
         else
@@ -830,7 +745,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             // Variable is an array.
             // variable : ID LSQUARE expression RSQUARE
             // as cx will be overwritten
-            fprintf(ic, "\tmov ax, cx\n");
+            fprintf(ic, "\tmov ax, cx \t;Line %d\n", startLine);
             variable->getIthChildren(2)->generateCode(ic, level);
             if (variable->children->isGlobal)
             {
@@ -864,11 +779,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         {
             if (variable->children->isGlobal)
             {
-                fprintf(ic, "\tmov cx, %s\n", variable->children->getName().c_str());
+                fprintf(ic, "\tmov cx, %s \t;Line %d\n", variable->children->getName().c_str(), startLine);
             }
             else
             {
-                fprintf(ic, "\tmov cx, %s\n", getLocalVar(variable->children->offset).c_str());
+                fprintf(ic, "\tmov cx, %s \t;Line %d\n", getLocalVar(variable->children->offset).c_str(), startLine);
             }
         }
         else
@@ -878,13 +793,13 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             variable->getIthChildren(2)->generateCode(ic, level);
             if (variable->children->isGlobal)
             {
-                fprintf(ic, "\tmov bx, cx\n");
+                fprintf(ic, "\tmov bx, cx \t;Line %d\n", startLine);
                 fprintf(ic, "\tadd bx, bx\n");
                 fprintf(ic, "\tmov cx, word ptr %s[bx]\n", variable->children->getName().c_str());
             }
             else
             {
-                fprintf(ic, "\tpush bp\n");
+                fprintf(ic, "\tpush bp \t;Line %d\n", startLine);
                 fprintf(ic, "\tsub bp, %d\n", variable->children->offset);
                 fprintf(ic, "\tadd cx, cx\n");
                 fprintf(ic, "\tadd bp, cx\n");
@@ -893,18 +808,18 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             }
         }
         // cx must retain the old value
-        fprintf(ic, "\tpush cx\n");
-        fprintf(ic, "\tdec cx\n");
+        fprintf(ic, "\tpush cx \t;Line %d\n", startLine);
+        fprintf(ic, "\tdec cx \t;Line %d\n", startLine);
 
         if (variable->rightPart == "ID")
         {
             if (variable->children->isGlobal)
             {
-                fprintf(ic, "\tmov %s, cx\n", variable->children->getName().c_str());
+                fprintf(ic, "\tmov %s, cx \t;Line %d\n", variable->children->getName().c_str(), startLine);
             }
             else
             {
-                fprintf(ic, "\tmov %s, cx\n", getLocalVar(variable->children->offset).c_str());
+                fprintf(ic, "\tmov %s, cx \t;Line %d\n", getLocalVar(variable->children->offset).c_str(), startLine);
             }
         }
         else
@@ -912,7 +827,7 @@ void SymbolInfo::generateCode(FILE *ic, int level)
             // Variable is an array.
             // variable : ID LSQUARE expression RSQUARE
             // as cx will be overwritten
-            fprintf(ic, "\tmov ax, cx\n");
+            fprintf(ic, "\tmov ax, cx \t;Line %d\n", startLine);
             variable->getIthChildren(2)->generateCode(ic, level);
             if (variable->children->isGlobal)
             {
@@ -946,13 +861,13 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     if (leftPart == "arguments" && rightPart == "arguments COMMA logic_expression")
     {
         getIthChildren(2)->generateCode(ic, level);
-        fprintf(ic, "\tpush cx\n");
+        fprintf(ic, "\tpush cx \t;Line %d\n", startLine);
         getIthChildren(0)->generateCode(ic, level);
     }
     if (leftPart == "arguments" && rightPart == "logic_expression")
     {
         children->generateCode(ic, level);
-        fprintf(ic, "\tpush cx\n");
+        fprintf(ic, "\tpush cx \t;Line %d\n", startLine);
     }
 }
 
