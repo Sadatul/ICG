@@ -1167,6 +1167,8 @@ variable : ID
 			SymbolInfo *check = symbolTable->lookUp($1->getName());
 			tmp->dType = check->getType();
 			tmp->setFlag(0); // We a[12] can be treated like an integer variable rather than an array.
+			$1->offset = check->offset;
+			$1->isGlobal = check->isGlobal;
 			$$ = tmp;
 		 }
 		 ;

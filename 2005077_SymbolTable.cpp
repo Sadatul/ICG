@@ -383,6 +383,30 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov %s, cx\n", getLocalVar(variable->children->offset).c_str());
             }
         }
+        else
+        {
+            // Variable is an array.
+            // variable : ID LSQUARE expression RSQUARE
+            // as cx will be overwritten
+            fprintf(ic, "\tmov ax, cx\n");
+            variable->getIthChildren(2)->generateCode(ic, level);
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov bx, cx\n");
+                fprintf(ic, "\tadd bx, bx\n");
+                fprintf(ic, "\tmov word ptr %s[bx], ax\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tpush bp\n");
+                fprintf(ic, "\tsub bp, %d\n", variable->children->offset);
+                fprintf(ic, "\tadd cx, cx\n");
+                fprintf(ic, "\tadd bp, cx\n");
+                fprintf(ic, "\tmov word ptr [bp], ax\n");
+                fprintf(ic, "\tpop bp\n");
+            }
+            fprintf(ic, "\tmov cx, ax\n");
+        }
 
         if (isCond)
         {
@@ -694,6 +718,27 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov cx, %s\n", getLocalVar(variable->children->offset).c_str());
             }
         }
+        else
+        {
+            // Variable is an array.
+            // variable : ID LSQUARE expression RSQUARE
+            variable->getIthChildren(2)->generateCode(ic, level);
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov bx, cx\n");
+                fprintf(ic, "\tadd bx, bx\n");
+                fprintf(ic, "\tmov cx, word ptr %s[bx]\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tpush bp\n");
+                fprintf(ic, "\tsub bp, %d\n", variable->children->offset);
+                fprintf(ic, "\tadd cx, cx\n");
+                fprintf(ic, "\tadd bp, cx\n");
+                fprintf(ic, "\tmov cx, word ptr [bp]\n");
+                fprintf(ic, "\tpop bp\n");
+            }
+        }
 
         if (isCond)
         {
@@ -743,6 +788,28 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov cx, %s\n", getLocalVar(variable->children->offset).c_str());
             }
         }
+        else
+        {
+            // Variable is an array.
+            // variable : ID LSQUARE expression RSQUARE
+            variable->getIthChildren(2)->generateCode(ic, level);
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov bx, cx\n");
+                fprintf(ic, "\tadd bx, bx\n");
+                fprintf(ic, "\tmov cx, word ptr %s[bx]\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tpush bp\n");
+                fprintf(ic, "\tsub bp, %d\n", variable->children->offset);
+                fprintf(ic, "\tadd cx, cx\n");
+                fprintf(ic, "\tadd bp, cx\n");
+                fprintf(ic, "\tmov cx, word ptr [bp]\n");
+                fprintf(ic, "\tpop bp\n");
+            }
+        }
+
         // cx must retain the old value
         fprintf(ic, "\tpush cx\n");
         fprintf(ic, "\tinc cx\n");
@@ -758,6 +825,31 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov %s, cx\n", getLocalVar(variable->children->offset).c_str());
             }
         }
+        else
+        {
+            // Variable is an array.
+            // variable : ID LSQUARE expression RSQUARE
+            // as cx will be overwritten
+            fprintf(ic, "\tmov ax, cx\n");
+            variable->getIthChildren(2)->generateCode(ic, level);
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov bx, cx\n");
+                fprintf(ic, "\tadd bx, bx\n");
+                fprintf(ic, "\tmov word ptr %s[bx], ax\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tpush bp\n");
+                fprintf(ic, "\tsub bp, %d\n", variable->children->offset);
+                fprintf(ic, "\tadd cx, cx\n");
+                fprintf(ic, "\tadd bp, cx\n");
+                fprintf(ic, "\tmov word ptr [bp], ax\n");
+                fprintf(ic, "\tpop bp\n");
+            }
+            fprintf(ic, "\tmov cx, ax\n");
+        }
+
         fprintf(ic, "\tpop cx\n");
         if (isCond)
         {
@@ -779,6 +871,27 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov cx, %s\n", getLocalVar(variable->children->offset).c_str());
             }
         }
+        else
+        {
+            // Variable is an array.
+            // variable : ID LSQUARE expression RSQUARE
+            variable->getIthChildren(2)->generateCode(ic, level);
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov bx, cx\n");
+                fprintf(ic, "\tadd bx, bx\n");
+                fprintf(ic, "\tmov cx, word ptr %s[bx]\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tpush bp\n");
+                fprintf(ic, "\tsub bp, %d\n", variable->children->offset);
+                fprintf(ic, "\tadd cx, cx\n");
+                fprintf(ic, "\tadd bp, cx\n");
+                fprintf(ic, "\tmov cx, word ptr [bp]\n");
+                fprintf(ic, "\tpop bp\n");
+            }
+        }
         // cx must retain the old value
         fprintf(ic, "\tpush cx\n");
         fprintf(ic, "\tdec cx\n");
@@ -794,6 +907,31 @@ void SymbolInfo::generateCode(FILE *ic, int level)
                 fprintf(ic, "\tmov %s, cx\n", getLocalVar(variable->children->offset).c_str());
             }
         }
+        else
+        {
+            // Variable is an array.
+            // variable : ID LSQUARE expression RSQUARE
+            // as cx will be overwritten
+            fprintf(ic, "\tmov ax, cx\n");
+            variable->getIthChildren(2)->generateCode(ic, level);
+            if (variable->children->isGlobal)
+            {
+                fprintf(ic, "\tmov bx, cx\n");
+                fprintf(ic, "\tadd bx, bx\n");
+                fprintf(ic, "\tmov word ptr %s[bx], ax\n", variable->children->getName().c_str());
+            }
+            else
+            {
+                fprintf(ic, "\tpush bp\n");
+                fprintf(ic, "\tsub bp, %d\n", variable->children->offset);
+                fprintf(ic, "\tadd cx, cx\n");
+                fprintf(ic, "\tadd bp, cx\n");
+                fprintf(ic, "\tmov word ptr [bp], ax\n");
+                fprintf(ic, "\tpop bp\n");
+            }
+            fprintf(ic, "\tmov cx, ax\n");
+        }
+
         fprintf(ic, "\tpop cx\n");
         if (isCond)
         {
