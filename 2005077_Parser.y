@@ -97,6 +97,182 @@ void freeParseTree(SymbolInfo *root){
 	delete root;
 }
 
+int getFlag(string str)
+{
+    string tmp = str.substr(0, 3);
+    if (tmp == "pop")
+    {
+        // printf("%s\n", tmp.c_str());
+        return 1;
+    }
+    else if (tmp == "mov")
+    {
+        return 2;
+    }
+    else if (tmp == "add")
+    {
+        return 3;
+    }
+
+    tmp = str.substr(0, 4);
+    if (tmp == "push")
+    {
+        // printf("%s\n", tmp.c_str());
+        return 0;
+    }
+    return 4;
+}
+
+vector<string> superSplitter(string str)
+{
+    int flag = getFlag(str);
+    vector<string> result;
+    if (flag == 0)
+    {
+        string temp = "";
+        for (int i = 5, n = str.length(); i < n; i++)
+        {
+            if (str[i] == ' ')
+            {
+                continue;
+            }
+            else
+            {
+                temp += str[i];
+            }
+        }
+        result.push_back(temp);
+    }
+    else if (flag == 1)
+    {
+        string temp = "";
+        for (int i = 4, n = str.length(); i < n; i++)
+        {
+            if (str[i] == ' ')
+            {
+                continue;
+            }
+            else
+            {
+                temp += str[i];
+            }
+        }
+        result.push_back(temp);
+    }
+    else if (flag == 2 || flag == 3)
+    {
+        string temp = "";
+        for (int i = 4, n = str.length(); i < n; i++)
+        {
+            if (str[i] == ' ')
+            {
+                continue;
+            }
+            if (str[i] == ',')
+            {
+                result.push_back(temp);
+                temp = "";
+            }
+            else
+            {
+                temp += str[i];
+            }
+        }
+        result.push_back(temp);
+    }
+    return result;
+}
+
+string filter(string s)
+{
+    string result = "";
+    for (int i = 0, n = s.length(); i < n; i++)
+    {
+        if (s[i] == '\t' || s[i] == '\n')
+        {
+            continue;
+        }
+        if (s[i] == ';')
+        {
+            break;
+        }
+        result += s[i];
+    }
+    return result;
+}
+void codeOptimizer(FILE *in, FILE *out)
+{
+    char *lineTmp = NULL;
+    size_t len = 0;
+    if (getline(&lineTmp, &len, in) == -1)
+    {
+        printf("Something wrong with the file\n");
+        return;
+    }
+    string prevStr(lineTmp);
+    vector<string> prev = superSplitter(filter(prevStr));
+    int prevFlag = getFlag(filter(prevStr));
+    for (int i = 0, n = prev.size(); i < n; i++)
+    {
+        printf("%s\n", prev[i].c_str());
+    }
+    while (getline(&lineTmp, &len, in) != -1)
+    {
+        string curStr(lineTmp);
+        vector<string> cur = superSplitter(filter(curStr));
+        int curFlag = getFlag(filter(curStr));
+        if (prevFlag == 0 && curFlag == 1 && prev[0] == cur[0])
+        {
+            // printf("DADA\n");
+            if (getline(&lineTmp, &len, in) == -1)
+            {
+                break;
+            }
+            string tmp(lineTmp);
+            prevStr = tmp;
+            prev = superSplitter(filter(prevStr));
+            prevFlag = getFlag(filter(prevStr));
+            continue;
+        }
+        if (prevFlag == 1 && curFlag == 0 && prev[0] == cur[0])
+        {
+            if (getline(&lineTmp, &len, in) == -1)
+            {
+                break;
+            }
+            string tmp(lineTmp);
+            prevStr = tmp;
+            prev = superSplitter(filter(prevStr));
+            prevFlag = getFlag(filter(prevStr));
+            continue;
+        }
+        if (curFlag == 2 && prevFlag == 2 && prev[1] == cur[0] && cur[1] == prev[0])
+        {
+            if (getline(&lineTmp, &len, in) == -1)
+            {
+                break;
+            }
+            string tmp(lineTmp);
+            prevStr = tmp;
+            prev = superSplitter(filter(prevStr));
+            prevFlag = getFlag(filter(prevStr));
+            continue;
+        }
+        if (prevFlag == 3 && prev[1] == "0")
+        {
+            prevStr = curStr;
+            prev = cur;
+            prevFlag = curFlag;
+            continue;
+        }
+        fprintf(out, "%s", prevStr.c_str());
+        prevStr = curStr;
+        prev = cur;
+        prevFlag = curFlag;
+    }
+    fprintf(out, "%s", prevStr.c_str());
+}
+
 %}
 
 %union {
@@ -132,7 +308,17 @@ start : program
 		// SymbolInfo::globalVars = symbolTable->getGlobalVars();
 		FILE *out = fopen("./output/code.txt", "w");
 		$$->generateCode(out, 0);
+		fclose(out);
+		FILE *inFile = fopen("./output/code.txt", "r");
+    	if (!inFile)
+    	{
+        	printf("FILE NOT FOUND\n");
+    	}
 
+		FILE *optimised = fopen("./output/optimised_code.txt", "w");
+		codeOptimizer(inFile, optimised);
+		fclose(inFile);
+		fclose(optimised);
 		freeParseTree($$);
 	  }
       ;

@@ -1,11 +1,6 @@
 int main()
 {
-    int i, j;
-    i = 0;
-    j = 0;
-    while (i++ != 10)
-    {
-        j = j + i;
-    }
-    println(j);
+    int a;
+    a = 2 * 5 * 4;
+    println(a);
 }
