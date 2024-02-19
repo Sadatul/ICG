@@ -151,6 +151,9 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         }
         fprintf(ic, "\tpush bp\n");
         fprintf(ic, "\tmov bp, sp\n");
+
+        // Allocating space for all the upcoming local variables.
+        fprintf(ic, "\tsub sp, %d\n", getIthChildren(5)->offset);
         getIthChildren(5)->generateCode(ic, level);
         fprintf(ic, "%s_exit:\n", getIthChildren(1)->getName().c_str());
         if (getIthChildren(1)->getName() == "main")
@@ -178,6 +181,8 @@ void SymbolInfo::generateCode(FILE *ic, int level)
         }
         fprintf(ic, "\tpush bp\n");
         fprintf(ic, "\tmov bp, sp\n");
+        // Allocating space for all the upcoming local variables.
+        fprintf(ic, "\tsub sp, %d\n", getIthChildren(4)->offset);
         getIthChildren(4)->generateCode(ic, level);
         fprintf(ic, "%s_exit:\n", getIthChildren(1)->getName().c_str());
         if (getIthChildren(1)->getName() == "main")
@@ -206,11 +211,11 @@ void SymbolInfo::generateCode(FILE *ic, int level)
     }
     if (leftPart == "var_declaration" && rightPart == "type_specifier declaration_list SEMICOLON")
     {
-        printf("INSIDE var_declaration %d\n", varDecOffsetList.size());
-        for (int i : varDecOffsetList)
-        {
-            fprintf(ic, "\tsub sp, %d\t;Line %d\n", i, startLine);
-        }
+        // printf("INSIDE var_declaration %d\n", varDecOffsetList.size());
+        // for (int i : varDecOffsetList)
+        // {
+        //     fprintf(ic, "\tsub sp, %d\t;Line %d\n", i, startLine);
+        // }
     }
     if (leftPart == "statements" && rightPart == "statements statement")
     {

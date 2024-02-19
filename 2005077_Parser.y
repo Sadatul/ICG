@@ -248,6 +248,7 @@ void codeOptimizer(FILE *in, FILE *out)
         }
         if (curFlag == 2 && prevFlag == 2 && prev[1] == cur[0] && cur[1] == prev[0])
         {
+			/*
             if (getline(&lineTmp, &len, in) == -1)
             {
                 break;
@@ -256,6 +257,7 @@ void codeOptimizer(FILE *in, FILE *out)
             prevStr = tmp;
             prev = superSplitter(filter(prevStr));
             prevFlag = getFlag(filter(prevStr));
+			*/
             continue;
         }
         if (prevFlag == 3 && prev[1] == "0")
